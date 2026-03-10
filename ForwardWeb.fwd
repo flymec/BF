@@ -29,6 +29,42 @@
       "version": "2.1.1",
       "author": "flyme",
       "url": "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/javrate.js"
+    },
+ {
+      "id": "xvideos",
+      "title": "XVideos",
+      "description": "Xvideos",
+      "requiredVersion": "0.0.1",
+      "version": "0.9.4",
+      "author": "flyme",
+      "url": "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/xvideos.js"
+    },
+ {
+      "id": "missav",
+      "title": "missav",
+      "description": "missav",
+      "requiredVersion": "0.0.1",
+      "version": "0.9.4",
+      "author": "flyme",
+      "url": "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/missav.js"
+    },
+ {
+      "id": "ph",
+      "title": "ph",
+      "description": "ph",
+      "requiredVersion": "0.0.1",
+      "version": "0.9.4",
+      "author": "flyme",
+      "url": "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/ph.js"
+    },
+ {
+      "id": "bz",
+      "title": "bz",
+      "description": "bz",
+      "requiredVersion": "0.0.1",
+      "version": "0.9.4",
+      "author": "flyme",
+      "url": "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/bz.js"
     }
   ]
 }
