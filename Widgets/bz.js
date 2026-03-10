@@ -1,11 +1,10 @@
-// 元数据定义（分类列表已省略中间部分，实际使用时需保留全部）
 var WidgetMetadata = {
-  id: "Bitch",
+  id: "bitch.live",
   title: "碧池直播",
   description: "TOM.5",
   author: "🅣🅞🅜",
   site: "@🅣🅞🅜",
-  version: "0.0.2", // 版本号更新
+  version: "0.0.2",
   requiredVersion: "0.0.1",
   modules: [
     {
@@ -19,8 +18,11 @@ var WidgetMetadata = {
           type: "enumeration",
           enumOptions: [
             { title: "卡哇伊", value: "jsonkawayi" },
-            // ... 此处省略其他分类（实际使用需保留所有）
-            { title: "情趣", value: "jsonqingqu" }
+            { title: "咪狐", value: "jsonmihu" },
+            { title: "花蝴蝶", value: "jsonhuahudie" },
+            { title: "蜜桃", value: "jsonmitao" },
+            { title: "番茄社区", value: "jsonfanjiashequ" },
+            { title: "LOVE", value: "jsonLOVE" }
           ]
         }
       ]
@@ -28,69 +30,108 @@ var WidgetMetadata = {
   ]
 };
 
-/**
- * 获取视频列表（兼容原环境，无额外依赖）
- * @param {Object} params - 参数，包含 category
- * @returns {Promise<Array>} 视频数组
- */
-async function getVideos(params) {
+async function getVideos(params = {}) {
+
   try {
-    // 1. 参数校验
-    if (!params || typeof params.category !== 'string') {
-      throw new Error('缺少必要参数或参数无效：category');
-    }
 
-    // 2. 构建 URL
-    const url = 'http://api.maiyoux.com:81/mf/' + params.category + '.txt';
+    const category = params.category || "jsonkawayi";
 
-    // 3. 发起请求（只传 headers，无 timeout）
-    const response = await Widget.http.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 4.4.2; OPPO R11 Build/NMF26X) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/30.0.0.0 Mobile Safari/537.36',
-        'Content-Type': 'application/octet-stream'
+    const url = `http://api.maiyoux.com:81/mf/${category}.txt`;
+
+    console.log("请求地址:", url);
+
+    const response = await Widget.http.get(url,{
+      timeout:15000,
+      headers:{
+        "User-Agent":"Mozilla/5.0",
+        "Accept":"*/*"
       }
     });
 
-    // 4. 处理响应数据
-    if (!response || !response.data) {
-      throw new Error('API 返回数据为空');
+    if(!response || !response.data){
+      throw new Error("接口无返回数据");
     }
 
-    // 5. 解析数据（若为字符串则尝试 JSON 解析）
     let data = response.data;
-    if (typeof data === 'string') {
-      try {
+
+    // 如果是字符串尝试解析
+    if(typeof data === "string"){
+      try{
         data = JSON.parse(data);
-      } catch (e) {
-        throw new Error('返回数据不是有效的 JSON 格式');
+      }catch(e){
+        console.log("JSON解析失败，尝试M3U解析");
       }
     }
 
-    // 6. 验证数据结构
-    if (typeof data !== 'object' || !data || !Array.isArray(data.zhubo)) {
-      throw new Error('返回数据格式错误：缺少 zhubo 数组');
+    let list = [];
+
+    // JSON格式
+    if(data && data.zhubo && Array.isArray(data.zhubo)){
+      list = data.zhubo;
     }
 
-    // 7. 转换数据
+    // 如果不是JSON尝试按行解析
+    if(list.length === 0 && typeof response.data === "string"){
+
+      const lines = response.data.split("\n");
+
+      for(let line of lines){
+
+        line = line.trim();
+
+        if(!line) continue;
+
+        const parts = line.split(",");
+
+        if(parts.length >= 2){
+
+          list.push({
+            title:parts[0],
+            address:parts[1],
+            img:""
+          });
+
+        }
+
+      }
+
+    }
+
     const videos = [];
-    for (let i = 0; i < data.zhubo.length; i++) {
-      const item = data.zhubo[i];
-      // 过滤：必须包含 address 和 title，且为字符串
-      if (item && typeof item.address === 'string' && typeof item.title === 'string') {
-        videos.push({
-          id: item.address,
-          type: 'url',
-          title: item.title.trim(),
-          posterPath: (item.img && typeof item.img === 'string') ? item.img : '',
-          videoUrl: item.address
-        });
-      }
+    const cache = new Set();
+
+    for(const item of list){
+
+      if(!item.address || !item.title) continue;
+
+      if(cache.has(item.address)) continue;
+
+      cache.add(item.address);
+
+      videos.push({
+        id:item.address,
+        type:"url",
+        title:item.title.trim(),
+        posterPath:item.img || "",
+        videoUrl:item.address
+      });
+
     }
+
+    if(videos.length === 0){
+      throw new Error("解析后没有视频数据");
+    }
+
+    console.log("解析视频数量:",videos.length);
 
     return videos;
 
-  } catch (error) {
-    // 将错误抛给上层处理
-    throw new Error('视频获取失败: ' + error.message);
+  }catch(err){
+
+    console.error("视频获取失败:",err);
+
+    throw new Error("视频获取失败: "+err.message);
+
   }
+
 }
