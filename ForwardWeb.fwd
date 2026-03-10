@@ -1,0 +1,70 @@
+{
+  "title": "𝓟𝓪𝓷'𝓼 𝓦𝓲𝓭𝓰𝓮𝓽𝓼🍑",
+  "description": "自用模块18+聚合",
+  "icon": "https://raw.githubusercontent.com/pan212/FW/refs/heads/main/icon/one.png",
+  "widgets": [
+	  {
+      "id": "Pornhub",
+      "title": "Pornhub",
+      "description": "在线观看Pornhub",
+      "requiredVersion": "0.0.1",
+      "version": "1.0.5",
+      "author": "海带",
+      "url": "https://raw.githubusercontent.com/Madai-v/ForwardWidgets/refs/heads/main/Widgets/ph.js"
+    },
+        {
+      "id": "jable",
+      "title": "Jable",
+      "description": "获取Jable全站视频",
+      "requiredVersion": "0.0.1",
+      "version": "1.0.6",
+      "author": "nibiru",
+      "url": "https://raw.githubusercontent.com/pan212/FW/refs/heads/main/WidgetsAutoBackup/18%2B/jable.js"
+    },
+    {
+      "id": "ti.bemarkt.javday",
+      "title": "JAVDay",
+      "description": "获取 JAVDay 推荐",
+      "requiredVersion": "0.0.1",
+      "version": "1.1.0",
+      "author": "Ti",
+      "url": "https://raw.githubusercontent.com/pan212/FW/refs/heads/main/WidgetsAutoBackup/18%2B/javday.js"
+    },
+    {
+      "id": "91porn",
+      "title": "91Porn",
+      "description": "获取 91Porn 视频",
+      "requiredVersion": "0.0.1",
+      "version": "0.5.0",
+      "author": "Baran",
+      "url": "https://unpkg.com/@forward-widget/nsfw/91porn"
+    },
+    {
+      "id": "missav",
+      "title": "missav",
+      "description": "missav",
+      "requiredVersion": "0.0.1",
+      "version": "1.0.0",
+      "author": "蝴蝶",
+      "url": "https://widgets-xd.vercel.app/Widgets/MissAV.js"
+    },
+    {
+      "id": "Bitch",
+      "title": "碧池直播",
+      "description": "碧池直播",
+      "requiredVersion": "0.0.1",
+      "version": "0.0.1",
+      "author": "🅣🅞🅜",
+      "url": "https://raw.githubusercontent.com/tom-proxy/FW/refs/heads/jk/zb.js"
+    },
+    {
+      "id": "unknow.baranwang.xvideos",
+      "title": "XVideos",
+      "description": "Xvideos",
+      "requiredVersion": "0.0.1",
+      "version": "0.9.4",
+      "author": "匿名",
+      "url": "https://unpkg.com/@forward-widget/nsfw/xvideos"
+    }
+  ]
+}
