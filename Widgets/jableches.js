@@ -1,5 +1,4 @@
-// ==WidgetMetadata==
-{
+WidgetMetadata = {
   id: "jable",
   title: "Jable",
   description: "获取 Jable 视频",
