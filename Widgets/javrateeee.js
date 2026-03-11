@@ -4,7 +4,7 @@ var WidgetMetadata = {
   description: "获取 JAVRate 推荐",
   author: "Ti",
   site: "https://www.javrate.com/",
-  version: "2.1.0",
+  version: "2.2.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
