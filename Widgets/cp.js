@@ -1,146 +1,176 @@
 // == Metadata =================================================================
 var WidgetMetadata = {
   id: "ti.bemarkt.javday",
-  title: "JAVDay",
-  description: "获取 JAVDay 推荐（含搜索与分类）",
+  title: "JAVDay Pro",
+  description: "JAVDay 全功能版 - 支持人气排序与防盗链播放",
   author: "flyme",
   site: "https://javday.app",
-  version: "1.6.0",
+  version: "1.7.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
     {
       title: "搜索视频",
-      description: "搜索 JAVDay 视频库",
-      requiresWebView: false,
       functionName: "search",
       params: [
-        { name: "keyword", title: "关键词", type: "input", value: "" },
+        { name: "keyword", title: "关键词", type: "input" },
         { name: "page", title: "页码", type: "page" }
       ]
     },
     {
-      title: "分类浏览",
-      description: "按分类查看视频",
-      requiresWebView: false,
+      title: "综合分类",
       functionName: "loadPage",
       params: [
         {
           name: "url", title: "分类", type: "enumeration",
           enumOptions: [
-            { title: "最新更新", value: "https://javday.app/label/new/" },
-            { title: "人气系列", value: "https://javday.app/label/hot/" },
+            { title: "最新上架", value: "https://javday.app/label/new/" },
+            { title: "人气热榜", value: "https://javday.app/label/hot/" },
             { title: "新作上市", value: "https://javday.app/category/new-release/" },
             { title: "有码视频", value: "https://javday.app/category/censored/" },
             { title: "无码视频", value: "https://javday.app/category/uncensored/" },
-            { title: "国产 AV", value: "https://javday.app/category/chinese-av/" },
-            { title: "玩偶姐姐", value: "https://javday.app/category/hongkongdoll/" }
+            { title: "国产原创", value: "https://javday.app/category/chinese-av/" }
           ],
           value: "https://javday.app/label/new/"
+        },
+        {
+          name: "sort_by", title: "排序方式", type: "enumeration",
+          enumOptions: [
+            { title: "最新", value: "new" },
+            { title: "人气", value: "popular" }
+          ],
+          value: "new"
         },
         { name: "page", title: "页码", type: "page" }
       ]
     }
-    // ... 其他模块可按需保留
   ]
 };
 
-// == Constants ================================================================
 const CONFIG = {
   BASE_URL: "https://javday.app",
-  UA: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+  UA: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
 };
 
-// == Core Functions ===========================================================
+// == 核心逻辑 =================================================================
 
 /**
- * 搜索功能
+ * 列表页加载（含人气排序转换）
+ */
+async function loadPage(params) {
+  const { url, sort_by = "new", page = 1 } = params;
+  let targetUrl = url;
+
+  // 1. 如果选择人气排序，需要重写 URL 结构
+  // 例如：/category/censored/ -> /fiter/by/hits/id/censored/
+  if (sort_by === "popular" && url.includes("/category/")) {
+    const catId = url.split('/').filter(Boolean).pop();
+    targetUrl = `${CONFIG.BASE_URL}/fiter/by/hits/id/${catId}/`;
+  }
+
+  // 2. 拼接页码
+  if (page > 1) {
+    targetUrl = targetUrl.endsWith('/') ? `${targetUrl}page/${page}/` : `${targetUrl}/page/${page}/`;
+  }
+
+  return await fetchAndParse(targetUrl);
+}
+
+/**
+ * 搜索逻辑
  */
 async function search(params) {
   const { keyword, page = 1 } = params;
+  if (!keyword) return [];
   const url = `${CONFIG.BASE_URL}/search/wd/${encodeURIComponent(keyword)}/page/${page}/`;
   return await fetchAndParse(url);
 }
 
 /**
- * 列表分页加载
- */
-async function loadPage(params) {
-  const { url, page = 1 } = params;
-  let targetUrl = url;
-  
-  // 处理分页路径拼接
-  if (page > 1) {
-    targetUrl = url.endsWith('/') ? `${url}page/${page}/` : `${url}/page/${page}/`;
-  }
-  
-  return await fetchAndParse(targetUrl);
-}
-
-/**
- * 详情页解析（获取播放地址）
+ * 视频详情解析（重点修复播放器提取）
  */
 async function loadDetail(link) {
   const resp = await Widget.http.get(link, { headers: { "User-Agent": CONFIG.UA } });
   const $ = Widget.html.load(resp.data);
   
-  // 1. 尝试从脚本中提取 DPlayer 配置
   let videoUrl = "";
-  $('script').each((i, el) => {
-    const html = $(el).html();
-    if (html.includes('new DPlayer')) {
-      const match = html.match(/url:\s*["']([^"']+)["']/);
-      if (match) videoUrl = match[1];
-    }
-  });
 
-  // 2. 兜底策略：查找 source 标签
-  if (!videoUrl) {
-    videoUrl = $('source[type="application/x-mpegURL"]').attr('src') || $('video').attr('src');
+  // 策略 A: 提取内联 DPlayer 配置
+  const scripts = $("script").toArray();
+  for (let script of scripts) {
+    const content = $(script).html();
+    if (content && content.includes("new DPlayer")) {
+      const match = content.match(/url:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/);
+      if (match) {
+        videoUrl = match[1];
+        break;
+      }
+    }
   }
 
-  if (!videoUrl) throw new Error("未找到视频源");
+  // 策略 B: 提取 script 标签内的字符串变量
+  if (!videoUrl) {
+    for (let script of scripts) {
+      const content = $(script).html();
+      const match = content.match(/var\s+(?:url|main)\s*=\s*['"]([^'"]+\.m3u8[^'"]*)['"]/i);
+      if (match) {
+        videoUrl = match[1];
+        break;
+      }
+    }
+  }
+
+  if (!videoUrl) throw new Error("此视频暂无可播放源或需要网页访问");
 
   return {
     videoUrl: videoUrl,
-    header: {
+    customHeaders: {
       "Referer": link,
-      "User-Agent": CONFIG.UA
+      "User-Agent": CONFIG.UA,
+      "Origin": CONFIG.BASE_URL
     }
   };
 }
 
-// == Helper Functions =========================================================
+// == 工具函数 =================================================================
 
 async function fetchAndParse(url) {
-  const resp = await Widget.http.get(url, {
-    headers: { "User-Agent": CONFIG.UA }
-  });
-  
-  const $ = Widget.html.load(resp.data);
-  const items = [];
+  try {
+    const resp = await Widget.http.get(url, { headers: { "User-Agent": CONFIG.UA } });
+    const $ = Widget.html.load(resp.data);
+    const items = [];
 
-  $(".video-wrapper .videoBox").each((i, el) => {
-    const $el = $(el);
-    const href = $el.attr("href");
-    const title = $el.find(".videoBox-info .title").text().trim();
-    
-    // 提取背景图
-    const style = $el.find(".videoBox-cover").attr("style") || "";
-    const imgMatch = style.match(/url\(['"]?(.*?)['"]?\)/);
-    const thumb = imgMatch ? imgMatch[1] : "";
+    $(".videoBox").each((i, el) => {
+      const $el = $(el);
+      // JAVDay 有时 a 标签在外部，有时在内部
+      const linkEl = $el.is('a') ? $el : $el.find('a').first();
+      const href = linkEl.attr("href");
+      const title = $el.find(".title").text().trim() || $el.find("img").attr("alt");
+      
+      // 封面提取逻辑优化
+      let thumb = "";
+      const style = $el.find(".videoBox-cover").attr("style") || "";
+      const imgMatch = style.match(/url\(['"]?(.*?)['"]?\)/);
+      if (imgMatch) {
+        thumb = imgMatch[1];
+      } else {
+        thumb = $el.find("img").attr("src") || $el.find("img").attr("data-src");
+      }
 
-    if (href) {
-      items.push({
-        title: title,
-        imgSrc: thumb.startsWith('http') ? thumb : CONFIG.BASE_URL + thumb,
-        link: href.startsWith('http') ? href : CONFIG.BASE_URL + href,
-        // CapyPlayer 识别 movie 类型会自动触发 loadDetail
-        mediaType: "movie" 
-      });
-    }
-  });
+      if (href && title) {
+        items.push({
+          title: title,
+          imgSrc: thumb ? (thumb.startsWith('http') ? thumb : CONFIG.BASE_URL + thumb) : "",
+          link: href.startsWith('http') ? href : CONFIG.BASE_URL + href,
+          mediaType: "movie",
+          description: $el.find(".time").text().trim() // 显示时长或日期
+        });
+      }
+    });
 
-  return items;
+    return items;
+  } catch (e) {
+    console.error("Fetch Error: ", e);
+    return [];
+  }
 }
-
