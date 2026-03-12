@@ -1088,24 +1088,24 @@ if (videoUrl && videoUrl.includes("/embed/")) {
   });
 
   return {
-  id: detailPageUrl,
-  type: "url",
-  mediaType: "video",
-  title: rawTitle,
-  videoUrl: videoUrl,
-  description: description || "暂无简介",
-  releaseDate: releaseDate,
-  genreTitle: genreTitle,
-  backdropPath: imgSrc || "",
-  link: detailPageUrl,
-  customHeaders: videoUrl
-    ? {
-        Referer: "https://www.javrate.com/",
-        "User-Agent": "Mozilla/5.0",
-      }
-    : undefined,
-  relatedItems: relatedItems,
-};
+    id: detailPageUrl,
+    type: "url",
+    title: rawTitle,
+    videoUrl: videoUrl,
+    description: description || "暂无简介",
+    releaseDate: releaseDate,
+    genreTitle: genreTitle,
+    backdropPath: imgSrc || "",
+    link: detailPageUrl,
+    customHeaders: videoUrl
+  ? {
+      Referer: "https://www.javrate.com/",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/136.0.0.0 Safari/537.36",
+    }
+  : undefined,
+    relatedItems: relatedItems,
+  };
 }
 
 
