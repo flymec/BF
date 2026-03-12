@@ -65,6 +65,15 @@
       "version": "0.9.4",
       "author": "flyme",
       "url": "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/bz.js"
+    },
+ {
+      "id": "91porn",
+      "title": "91porn",
+      "description": "91porn",
+      "requiredVersion": "0.0.1",
+      "version": "0.9.4",
+      "author": "flyme",
+      "url": "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/91porn.js"
     }
   ]
 }
