@@ -5,7 +5,7 @@ var WidgetMetadata = {
   description: "获取 JAVDay 推荐",
   author: "flyme",
   site: "https://javday.app",
-  version: "1.6.1",
+  version: "1.6.2",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -226,54 +226,27 @@ var WidgetMetadata = {
 };
 
 // == Constants ================================================================
-const CONFIG = {
-  BASE_URL: "https://javday.app",
-  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  LOG_PREFIX: "JAVDay -",
-  TIMEOUT: 15000
-};
+const BASE_URL = "https://javday.app";
+const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+const TIMEOUT = 15000;
 
 // == Utility Functions ========================================================
 
 /**
- * 发送 HTTP GET 请求（兼容多种环境）
+ * 发送 HTTP GET 请求，返回 HTML 字符串
  */
-async function httpGet(url, referer = CONFIG.BASE_URL) {
+async function httpGet(url, referer = BASE_URL) {
   const headers = {
-    "User-Agent": CONFIG.USER_AGENT,
+    "User-Agent": USER_AGENT,
     "Referer": referer,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
   };
-
-  // 尝试 apiGetAbsolute（CapyPlayer 推荐）
-  if (typeof apiGetAbsolute !== 'undefined') {
-    try {
-      const response = await apiGetAbsolute(url, { headers, timeout: CONFIG.TIMEOUT });
-      // 处理响应格式
-      let html = response;
-      if (response && typeof response === 'object') {
-        if (response.data) html = response.data;
-        else if (response.body) html = response.body;
-      }
-      if (typeof html !== 'string') html = String(html);
-      return html;
-    } catch (e) {
-      console.warn(`${CONFIG.LOG_PREFIX} apiGetAbsolute 失败:`, e.message);
-    }
-  }
-
-  // 尝试 Widget.http.get（旧版）
-  if (typeof Widget !== 'undefined' && Widget.http && Widget.http.get) {
-    try {
-      const response = await Widget.http.get(url, { headers, timeout: CONFIG.TIMEOUT });
-      if (response && response.data) return response.data;
-      return response;
-    } catch (e) {
-      console.warn(`${CONFIG.LOG_PREFIX} Widget.http.get 失败:`, e.message);
-    }
-  }
-
-  throw new Error(`所有请求方法均失败: ${url}`);
+  // 直接使用 apiGetAbsolute，文档推荐
+  const response = await apiGetAbsolute(url, { headers, timeout: TIMEOUT });
+  // 确保返回字符串
+  if (typeof response === 'string') return response;
+  if (response && typeof response === 'object' && response.data) return response.data;
+  return String(response);
 }
 
 /**
@@ -283,7 +256,7 @@ function normalizeUrl(url) {
   if (!url) return "";
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   if (url.startsWith("//")) return `https:${url}`;
-  const base = CONFIG.BASE_URL.replace(/\/+$/, "");
+  const base = BASE_URL.replace(/\/+$/, "");
   const path = url.startsWith("/") ? url : `/${url}`;
   return base + path;
 }
@@ -354,7 +327,7 @@ function extractVideoUrl($) {
       const url = extractVideoUrlFromDPlayerScript(content);
       if (url) {
         videoUrl = url;
-        return false; // 跳出循环
+        return false;
       }
     }
   });
@@ -425,7 +398,7 @@ function buildPageUrl(baseUrl, sortBy, page) {
  */
 function getFullUrl(path) {
   if (path.startsWith("http")) return path;
-  return `${CONFIG.BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  return `${BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 // == Core Functions ===========================================================
@@ -453,7 +426,7 @@ async function loadPage(params = {}) {
 
     // 如果人气路径无数据，降级到普通路径
     if (items.length === 0 && sort_by === "popular") {
-      console.warn(`${CONFIG.LOG_PREFIX} 人气路径无数据，降级到普通路径`);
+      console.warn("人气路径无数据，降级到普通路径");
       const fallbackPath = buildPageUrl(url, "new", page);
       const fallbackHtml = await httpGet(getFullUrl(fallbackPath), url);
       const $fallback = Widget.html.load(fallbackHtml);
@@ -463,7 +436,7 @@ async function loadPage(params = {}) {
     return items;
   } catch (error) {
     if (sort_by === "popular") {
-      console.warn(`${CONFIG.LOG_PREFIX} 人气路径请求失败，尝试降级`, error.message);
+      console.warn("人气路径请求失败，尝试降级", error.message);
       const fallbackPath = buildPageUrl(url, "new", page);
       const fallbackHtml = await httpGet(getFullUrl(fallbackPath), url);
       const $fallback = Widget.html.load(fallbackHtml);
@@ -483,9 +456,9 @@ async function search(params = {}) {
   const encodedKeyword = encodeURIComponent(keyword);
   let searchUrl;
   if (page === 1) {
-    searchUrl = `${CONFIG.BASE_URL}/search/wd/${encodedKeyword}/`;
+    searchUrl = `${BASE_URL}/search/wd/${encodedKeyword}/`;
   } else {
-    searchUrl = `${CONFIG.BASE_URL}/search/wd/${encodedKeyword}/page/${page}/`;
+    searchUrl = `${BASE_URL}/search/wd/${encodedKeyword}/page/${page}/`;
   }
 
   const html = await httpGet(searchUrl);
@@ -508,12 +481,14 @@ async function loadDetail(link) {
   const videoUrl = extractVideoUrl($);
   if (!videoUrl) throw new Error("无法找到视频源");
 
+  // 按照文档示例返回对象，包含 title 和 videoUrl
   return {
     title: title,
     videoUrl: videoUrl,
+    // 可选的自定义请求头，播放时使用
     customHeaders: {
       Referer: fullLink,
-      "User-Agent": CONFIG.USER_AGENT
+      "User-Agent": USER_AGENT
     }
   };
 }
