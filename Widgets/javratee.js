@@ -4,7 +4,7 @@ var WidgetMetadata = {
   description: "获取 JAVRate 推荐",
   author: "Ti",
   site: "https://www.javrate.com/",
-  version: "2.1.0",
+  version: "2.5.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -996,9 +996,19 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
     console.error(`解析 LD+JSON schema 失败:`, e.message);
   }
 
-  if (!videoUrl) {
-    videoUrl = $(".player-box iframe").attr("src");
-  }
+  // 获取播放器地址
+if (!videoUrl) {
+  videoUrl =
+    $(".player-box iframe").attr("src") ||
+    $(".player-box iframe").attr("data-src") ||
+    $("iframe[src*='mediadelivery']").attr("src") ||
+    $("iframe").first().attr("src");
+}
+
+// 补全 https
+if (videoUrl && videoUrl.startsWith("//")) {
+  videoUrl = "https:" + videoUrl;
+}
 
   let releaseDate = "";
   $('.main-content > .left h4:contains("发片日期")')
@@ -1069,18 +1079,23 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
     }
   });
 
-  return {
-    id: detailPageUrl,
-    type: "url",
-    title: rawTitle,
-    videoUrl: videoUrl,
-    description: description || "暂无简介",
-    releaseDate: releaseDate,
-    genreTitle: genreTitle,
-    backdropPath: imgSrc || "",
-    link: detailPageUrl,
-    customHeaders: videoUrl ? { Referer: "https://iframe.mediadelivery.net/" } : undefined,
-    relatedItems: relatedItems,
+    return {
+  id: detailPageUrl,
+  type: "url",
+  title: rawTitle,
+  videoUrl: videoUrl || "",
+  description: description || "暂无简介",
+  releaseDate: releaseDate,
+  genreTitle: genreTitle,
+  backdropPath: imgSrc || "",
+  link: detailPageUrl,
+  customHeaders: videoUrl
+    ? {
+        Referer: "https://www.javrate.com/",
+        "User-Agent": "Mozilla/5.0"
+      }
+    : undefined,
+  relatedItems: relatedItems,
     // 强制 IJK 硬解解码
     playerOptions: {
       playerType: "ijk",          // 强制使用 ijk 播放器
