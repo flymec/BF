@@ -1093,7 +1093,7 @@ if (!videoUrl) {
     genreTitle: genreTitle,
     backdropPath: imgSrc || "",
     link: detailPageUrl,
-    customHeaders: videoUrl ? { Referer: "https://iframe.mediadelivery.net/" } : undefined,
+    customHeaders: videoUrl ? { Referer: "https://www.javrate.com/" } : undefined,
     relatedItems: relatedItems,
   };
 }
