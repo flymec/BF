@@ -996,8 +996,27 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
     console.error(`解析 LD+JSON schema 失败:`, e.message);
   }
 
-  if (!videoUrl) {
-  videoUrl = extractVideoUrl($);
+  function resolveVideoUrl($) {
+
+  let videoUrl = null;
+
+  const iframe = $(".player-box iframe").attr("src");
+
+  if (!iframe) return null;
+
+  if (iframe.includes("mediadelivery.net")) {
+
+    const match = iframe.match(/embed\/([a-zA-Z0-9\-]+)/);
+
+    if (match) {
+      videoUrl = `https://iframe.mediadelivery.net/play/${match[1]}/index.m3u8`;
+    }
+
+  } else {
+    videoUrl = iframe;
+  }
+
+  return videoUrl;
 }
 
   let releaseDate = "";
