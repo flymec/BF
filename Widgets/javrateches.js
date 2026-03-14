@@ -919,16 +919,17 @@ var WidgetMetadata = {
 };
 
 
-const ARTIST_MAP_REMOTE_URL = "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/javrate_actors.json";
-let artistMapCache = null;
+const BASE_URL = "https://www.javrate.com";
+const ARTIST_MAP_URL = "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/javrate_actors.json";let artistMapCache = null;
 let artistMapCacheTime = 0;
 const CACHE_DURATION = 24 * 60 * 60 * 1000;
 const BASE_URL = "https://www.javrate.com";
 
-function getCommonHeaders() {
+function getCommonHeaders(referer = BASE_URL) {
   return {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-    "Referer": BASE_URL
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Referer": referer,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
   };
 }
 
@@ -948,16 +949,14 @@ async function normalizeArtistName(name) {
   return name.replace(/[\s\u3000]+/g, "").replace(/[・･]/g, "").toLowerCase().normalize("NFKC");
 }
 
-function parseDetailPage(detailPageHtml, detailPageUrl) {
-  const $ = Widget.html.load(detailPageHtml);
+function parseDetailPage(html, url) {
+  const $ = Widget.html.load(html);
   
+  / 标题处理
   const titleH1 = $("h1.mb-2.mt-1");
-  const movieNumber = titleH1.find("strong.fg-main").text().trim();
-  const titleClone = titleH1.clone();
-  titleClone.find("strong").remove();
-  const mainTitleText = titleClone.text().trim();
-  const rawTitle = movieNumber ? `${movieNumber} ${mainTitleText}` : mainTitleText;
-
+  const movieNum = titleH1.find("strong.fg-main").text().trim();
+  const mainTitle = titleH1.clone().find("strong").remove().end().text().trim();
+  const fullTitle = movieNum ? `${movieNum} ${mainTitle}` : mainTitle;
   let videoUrl = null;
   let imgSrc = null;
   let description = "";
@@ -976,50 +975,56 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
   }
 
   // 2. 如果 JSON-LD 没拿到视频，调用内部解析器
-  if (!videoUrl) {
-    videoUrl = resolveVideoUrl($);
-  }
-
-  function resolveVideoUrl($) {
-    const iframe = $(".player-box iframe").attr("src");
-    if (!iframe) return null;
+  let videoUrl = null;
+  let playerReferer = "https://iframe.mediadelivery.net/";
+  
+  const iframeSrc = $(".player-box iframe").attr("src") || "";
+  if (iframeSrc) {
+    let absoluteIframe = iframeSrc.startsWith("//") ? "https:" + iframeSrc : iframeSrc;
+    playerReferer = absoluteIframe; // 记录 iframe 地址作为 Referer
     
-    let finalUrl = iframe.startsWith("//") ? "https:" + iframe : iframe;
-
-    if (finalUrl.includes("mediadelivery.net")) {
-      const match = finalUrl.match(/embed\/([a-zA-Z0-9\-]+)/);
-      if (match) return `https://iframe.mediadelivery.net/play/${match[1]}/index.m3u8`;
+    // 匹配 BunnyCDN 路径: /embed/{libraryId}/{videoId}
+    const bunnyMatch = absoluteIframe.match(/embed\/(\d+)\/([a-z0-9\-]+)/i);
+    if (bunnyMatch) {
+      videoUrl = `https://iframe.mediadelivery.net/play/${bunnyMatch[1]}/${bunnyMatch[2]}/playlist.m3u8`;
+    } else {
+      // 备选匹配 (部分旧版或简化路径)
+      const singleIdMatch = absoluteIframe.match(/embed\/([a-z0-9\-]{36})/i);
+      if (singleIdMatch) {
+        videoUrl = `https://iframe.mediadelivery.net/play/${singleIdMatch[1]}/playlist.m3u8`;
+      }
     }
-    return finalUrl;
   }
 
   // 解析日期
-  let releaseDate = "";
-  $('.main-content > .left h4:contains("发片日期")').next("div.col-auto").find("h4").each(function() {
-    releaseDate = $(this).text().trim();
+ // 3. 基础信息抓取
+  let date = "";
+  $('.main-content h4:contains("发片日期")').next().find("h4").each(function() {
+    const m = $(this).text().match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+    if (m) date = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
   });
-  if (releaseDate) {
-    const dateMatch = releaseDate.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
-    if (dateMatch) releaseDate = `${dateMatch[1]}-${dateMatch[2].padStart(2, '0')}-${dateMatch[3].padStart(2, '0')}`;
-  }
 
   const tags = [];
-  $("section.movie-keywords a.badge").each((idx, el) => tags.push($(el).text().trim()));
-
-  return {
-    id: detailPageUrl,
+  $("section.movie-keywords a.badge").each((i, el) => tags.push($(el).text().trim()));
+ return {
+    id: url,
     type: "url",
-    title: rawTitle,
+    title: fullTitle,
     videoUrl: videoUrl,
-    description: description || $(".description-text").text().trim() || "暂无简介",
-    releaseDate: releaseDate,
+    description: $(".description-text").text().trim() || "暂无简介",
+    releaseDate: date,
     genreTitle: tags.join(", "),
-    backdropPath: imgSrc || $(".fixed-background-img").attr("src") || "",
-    link: detailPageUrl,
-    customHeaders: (videoUrl && videoUrl.includes("mediadelivery.net")) 
-      ? { "Referer": "https://iframe.mediadelivery.net/", "User-Agent": "Mozilla/5.0" }
-      : { "Referer": BASE_URL, "User-Agent": "Mozilla/5.0" },
-    relatedItems: parseRelatedItems($, detailPageUrl)
+    backdropPath: $(".fixed-background-img").attr("src") || "",
+    link: url,
+    // 关键修复：伪造播放器请求头
+   customHeaders: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "Referer": playerReferer,
+      "Origin": "https://iframe.mediadelivery.net",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "cross-site"
+    }
   };
 }
 
@@ -1076,33 +1081,80 @@ async function fetchDataForPath(path, params = {}) {
   }
 }
 
-async function parseItems(currentBaseUrl, $, listPageUrl) {
-  const videoItems = [];
-  $('div[class^="movie-grid-new-"] .mgn-item').each((index, element) => {
-    const item = $(element);
-    const relLink = item.find(".mgn-title a").attr("href");
-    if (!relLink) return;
+async function parseItems($, baseUrl) {
+  const results = [];
+  $('div[class^="movie-grid-new-"] .mgn-item').each((i, el) => {
+    const item = $(el);
+    const link = item.find(".mgn-title a").attr("href");
+    if (!link) return;
 
     const titleH = item.find(".mgn-title h3");
     const num = titleH.find("strong").text().trim();
     const title = titleH.clone().find("strong").remove().end().text().trim();
-    
-    videoItems.push({
-      id: relLink.startsWith("http") ? relLink : currentBaseUrl + relLink,
+
+    results.push({
+      id: link.startsWith("http") ? link : baseUrl + (link.startsWith("/") ? "" : "/") + link,
       type: "url",
       title: `${num} ${title}`.trim(),
       backdropPath: item.find("img.mgn-cover").attr("src") || "",
-      link: relLink.startsWith("http") ? relLink : currentBaseUrl + relLink,
+      link: link.startsWith("http") ? link : baseUrl + (link.startsWith("/") ? "" : "/") + link,
       mediaType: "movie"
     });
   });
-  return videoItems;
+  return results;
 }
 
-async function loadDetail(linkValue) {
-  try {
-    const response = await Widget.http.get(linkValue, { headers: getCommonHeaders() });
-    return parseDetailPage(response.data, linkValue);
+// --- 动作执行 ---
+
+async function loadPage(params) {
+  let path = params.categoryType || "/movie/new/";
+  const page = parseInt(params.page) || 1;
+
+  // 1. 艺人跳转逻辑
+  if (params.artistId) {
+    try {
+      const res = await Widget.http.get(ARTIST_MAP_URL);
+      const map = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+      const targetName = params.artistId.replace(/[\s・]/g, "").toLowerCase();
+      let artistId = null;
+      
+      for (let name in map) {
+        if (name.replace(/[・]/g, "").toLowerCase().includes(targetName)) {
+          artistId = map[name];
+          break;
+        }
+      }
+      
+      if (artistId) {
+        path = page > 1 
+          ? `/actor/movie/1-0-2-${page}/${artistId}.html` 
+          : `/actor/movie/${artistId}.html`;
+      }
+    } catch (e) { console.error("加载艺人表出错"); }
+  } 
+  // 2. 厂商逻辑
+  else if (params.issuer) {
+    path = `/Issuer/${encodeURIComponent(params.issuer)}`;
+  }
+  // 3. 热门排行逻辑
+  else if (path.includes("/best/")) {
+    path = page > 1 ? `${path}?page=${page}` : path;
+  } 
+  // 4. 其他分类逻辑
+  else if (path.includes("/menu/")) {
+    path = `${path}${page}`;
+  }
+
+  const url = path.startsWith("http") ? path : BASE_URL + path;
+  const response = await Widget.http.get(url, { headers: getCommonHeaders() });
+  const $ = Widget.html.load(response.data);
+  return parseItems($, BASE_URL);
+}
+
+async function loadDetail(link) {
+  const response = await Widget.http.get(link, { headers: getCommonHeaders() });
+  return parseDetailPage(response.data, link);
+}
   } catch (error) {
     return { id: linkValue, title: "加载失败", description: error.message };
   }
