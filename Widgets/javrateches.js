@@ -998,7 +998,9 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
 
   if (!videoUrl) {
   let iframeSrc = $(".player-box iframe").attr("src");
-
+if (videoUrl && videoUrl.includes("iframe.mediadelivery.net")) {
+  videoUrl = videoUrl.replace("/embed/", "/play/");
+}
   if (iframeSrc) {
 
     // 处理 //iframe.mediadelivery.net
