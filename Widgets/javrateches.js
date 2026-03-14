@@ -1,10 +1,10 @@
 var WidgetMetadata = {
-  id: "javrate",
+  id: "ti.bemarkt.javrate",
   title: "JAVRate",
   description: "获取 JAVRate 推荐",
-  author: "𝕏𝕚𝕪𝕦𝕝𝕚𝕦",
+  author: "Ti",
   site: "https://www.javrate.com/",
-  version: "1.0.1",
+  version: "2.1.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -919,7 +919,7 @@ var WidgetMetadata = {
 };
 
 
-const ARTIST_MAP_REMOTE_URL = "https://raw.githubusercontent.com/pack1r/ForwardWidgets/refs/heads/main/widgets/javrate_actors.json";
+const ARTIST_MAP_REMOTE_URL = "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/javrate_actors.json";
 let artistMapCache = null;
 let artistMapCacheTime = 0;
 const CACHE_DURATION = 24 * 60 * 60 * 1000;
@@ -997,20 +997,7 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
   }
 
   if (!videoUrl) {
-  let iframeSrc = $(".player-box iframe").attr("src");
-if (videoUrl && videoUrl.includes("iframe.mediadelivery.net")) {
-  videoUrl = videoUrl.replace("/embed/", "/play/");
-}
-  if (iframeSrc) {
-
-    // 处理 //iframe.mediadelivery.net
-    if (iframeSrc.startsWith("//")) {
-      iframeSrc = "https:" + iframeSrc;
-    }
-
-    // 有些是 embed，需要直接用 iframe 地址
-    videoUrl = iframeSrc;
-  }
+  videoUrl = extractVideoUrl($);
 }
 
   let releaseDate = "";
@@ -1042,12 +1029,9 @@ if (videoUrl && videoUrl.includes("iframe.mediadelivery.net")) {
   const genreTitle = tags.join(", ");
 
   const backdropImg = $(".fixed-background-img").attr("src");
-
-   if (!imgSrc && backdropImg) {
-  imgSrc = backdropImg.startsWith("//")
-    ? "https:" + backdropImg
-    : backdropImg;
-}
+  if (!imgSrc) {
+    imgSrc = backdropImg;
+  }
 
   const relatedItems = [];
   $("div.alike-grid-container .mgn-item").each((idx, element) => {
@@ -1086,19 +1070,23 @@ if (videoUrl && videoUrl.includes("iframe.mediadelivery.net")) {
   });
 
   return {
-  id: detailPageUrl,
-  type: "url",
-  title: rawTitle,
-  videoUrl: videoUrl || null,
-  description: description || "暂无简介",
-  releaseDate: releaseDate,
-  genreTitle: genreTitle,
-  backdropPath: imgSrc || "",
-  link: detailPageUrl,
-  customHeaders: videoUrl ? { Referer: BASE_URL } : undefined,
-  mediaType: "movie",
-  relatedItems: relatedItems
-};
+    id: detailPageUrl,
+    type: "url",
+    title: rawTitle,
+    videoUrl: videoUrl,
+    description: description || "暂无简介",
+    releaseDate: releaseDate,
+    genreTitle: genreTitle,
+    backdropPath: imgSrc || "",
+    link: detailPageUrl,
+    customHeaders: videoUrl
+  ? {
+      Referer: "https://iframe.mediadelivery.net/",
+      "User-Agent": "Mozilla/5.0"
+    }
+  : undefined,
+    relatedItems: relatedItems,
+  };
 }
 
 
