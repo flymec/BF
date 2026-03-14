@@ -984,6 +984,7 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
   let imgSrc = null;
   let description = "";
 
+  // 1. 优先从 JSON-LD 获取
   try {
     const schemaScript = $('script[type="application/ld+json"]').html();
     if (schemaScript) {
@@ -993,31 +994,32 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
       description = schemaData.description || "";
     }
   } catch (e) {
-    console.error(`解析 LD+JSON schema 失败:`, e.message);
+    console.error(`解析 LD+JSON 失败:`, e.message);
   }
 
+  // 2. 如果 schema 没拿到，通过 DOM 解析（修复原代码定义了却没调用的问题）
+  if (!videoUrl) {
+    videoUrl = resolveVideoUrl($);
+  }
+
+  // 内部解析函数优化
   function resolveVideoUrl($) {
+    const iframe = $(".player-box iframe").attr("src");
+    if (!iframe) return null;
 
-  let videoUrl = null;
+    let finalUrl = iframe;
+    // 处理协议相对路径
+    if (finalUrl.startsWith("//")) finalUrl = "https:" + finalUrl;
 
-  const iframe = $(".player-box iframe").attr("src");
-
-  if (!iframe) return null;
-
-  if (iframe.includes("mediadelivery.net")) {
-
-    const match = iframe.match(/embed\/([a-zA-Z0-9\-]+)/);
-
-    if (match) {
-      videoUrl = `https://iframe.mediadelivery.net/play/${match[1]}/index.m3u8`;
+    if (finalUrl.includes("mediadelivery.net")) {
+      const match = finalUrl.match(/embed\/([a-zA-Z0-9\-]+)/);
+      if (match) {
+        return `https://iframe.mediadelivery.net/play/${match[1]}/index.m3u8`;
+      }
     }
 
-  } else {
-    videoUrl = iframe;
+ return finalUrl;
   }
-
-  return videoUrl;
-}
 
   let releaseDate = "";
   $('.main-content > .left h4:contains("发片日期")')
@@ -1096,14 +1098,11 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
     description: description || "暂无简介",
     releaseDate: releaseDate,
     genreTitle: genreTitle,
-    backdropPath: imgSrc || "",
+    backdropPath: imgSrc || $(".fixed-background-img").attr("src") || "",
     link: detailPageUrl,
-    customHeaders: videoUrl
-  ? {
-      Referer: "https://iframe.mediadelivery.net/",
-      "User-Agent": "Mozilla/5.0"
-    }
-  : undefined,
+  customHeaders: (videoUrl && videoUrl.includes("mediadelivery"))
+      ? { Referer: "https://iframe.mediadelivery.net/", "User-Agent": "Mozilla/5.0" }
+      : { Referer: BASE_URL, "User-Agent": "Mozilla/5.0" },
     relatedItems: relatedItems,
   };
 }
@@ -1162,12 +1161,14 @@ async function fetchDataForPath(path, params = {}) {
   const page = parseInt(params.page, 10) || 1;
   let requestUrl = "";
 
-  if (!path || !path.startsWith("/")) {
+  if (path.includes("/actor/movie/")) {
     path = "/" + (path || "");
   }
 
   if (path.includes("/actor/movie/") && path.endsWith(".html")) {
-    const artistId = path.match(/\/actor\/movie\/([^\/]+)\.html$/)?.[1];
+   // 修复正则，确保匹配更稳健
+    const artistIdMatch = path.match(/movie\/([^\/\.]+)/);
+    const artistId = artistIdMatch ? artistIdMatch[1] : null;
     if (!artistId) {
       return [{
         id: "artist-id-error", 
@@ -1178,7 +1179,7 @@ async function fetchDataForPath(path, params = {}) {
         link: path 
       }];
     }
-    requestUrl = page > 1 
+   requestUrl = (page > 1 && artistId) 
       ? `${BASE_URL}/actor/movie/1-0-2-${page}/${artistId}.html`
       : `${BASE_URL}${path}`;
   }
