@@ -4,7 +4,7 @@ var WidgetMetadata = {
   description: "获取 JAVRate 推荐",
   author: "Ti",
   site: "https://www.javrate.com/",
-  version: "2.4.0",
+  version: "2.5.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -460,20 +460,49 @@ async function fetchDataForPath(path, params = {}) {
 
 // == loadDetail ===============================================================
 //
-// javrate.com 详情页结构（已通过浏览器源码确认）：
+// javrate.com 两步取流程（已通过浏览器实际验证）：
 //
-//   <iframe id="v2-player"
-//     src="/Player/V2?payload=BASE64URL_ENCODED_STRING&poster=IMAGE_URL"
-//     ...>
-//   </iframe>
+// 步骤 1：请求详情页
+//   <iframe id="v2-player" src="/Player/V2?payload=BASE64&poster=IMG_URL">
+//   从 #v2-player 的 src 属性取得播放器页面地址
 //
-// payload 在静态 HTML 里直接存在，无需执行 JS。
-// 策略：
-//   1. HTTP 请求详情页，用 cheerio 抓 #v2-player 的 src
-//   2. 拼成完整 URL 作为 videoUrl，type 设为 "webview"
-//      让框架内嵌这个播放器 iframe（与 JAVDay 的 webview 模式一致）
+// 步骤 2：请求 /Player/V2?payload=...
+//   页面静态 HTML 的 LD+JSON 里有：
+//   { "contentUrl": "https://videocdn.avking.xyz/.../playlist.m3u8" }
+//   直接解析 contentUrl 得到 m3u8 直链
+//
+// 步骤 3：type: "url" 播放 m3u8
+//   Referer 设为详情页 URL，User-Agent 模拟浏览器
 //
 // ============================================================================
+
+/**
+ * 从 HTML 字符串的 LD+JSON 中提取 contentUrl
+ */
+function extractContentUrl(html) {
+  // 用正则直接匹配，避免完整 JSON 解析因格式问题失败
+  const match = html.match(/"contentUrl"\s*:\s*"([^"]+)"/);
+  if (match?.[1]) return match[1];
+
+  // 备用：完整 JSON 解析
+  try {
+    const scriptMatches = html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+    for (const sm of scriptMatches) {
+      const data = JSON.parse(sm[1]);
+      const items = Array.isArray(data) ? data : [data];
+      for (const item of items) {
+        if (item.contentUrl) return item.contentUrl;
+        if (item["@graph"]) {
+          for (const node of item["@graph"]) {
+            if (node.contentUrl) return node.contentUrl;
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
+  return null;
+}
 
 async function loadDetail(linkValue) {
   if (!linkValue) throw new Error("缺少视频链接");
@@ -482,22 +511,31 @@ async function loadDetail(linkValue) {
     ? linkValue
     : `${BASE_URL}${linkValue}`;
 
-  const html = await httpGet(fullLink, BASE_URL);
-  const $ = Widget.html.load(html);
+  // ── 步骤 1：请求详情页，拿 #v2-player iframe src ──────────────────────────
+  const detailHtml = await httpGet(fullLink, BASE_URL);
+  const $ = Widget.html.load(detailHtml);
 
-  // ── 播放器 iframe（核心）────────────────────────────────────────────────────
-  // <iframe id="v2-player" src="/Player/V2?payload=...&poster=...">
   const iframeSrc = $("#v2-player").attr("src")
     || $("iframe[src*='/Player/V2']").attr("src")
     || $("iframe[src*='payload']").attr("src");
 
   if (!iframeSrc) {
-    throw new Error("未找到播放器 iframe (#v2-player)，页面结构可能已变更");
+    throw new Error("未找到播放器 iframe (#v2-player)，网站结构可能已更新");
   }
 
   const playerUrl = normalizeUrl(iframeSrc);
 
-  // ── 标题 ────────────────────────────────────────────────────────────────────
+  // ── 步骤 2：请求 /Player/V2，从 LD+JSON 拿 contentUrl (m3u8) ─────────────
+  const playerHtml = await httpGet(playerUrl, fullLink);
+  const contentUrl = extractContentUrl(playerHtml);
+
+  if (!contentUrl) {
+    throw new Error("未能从播放器页面提取视频地址 (contentUrl)");
+  }
+
+  // ── 解析基础信息 ────────────────────────────────────────────────────────────
+
+  // 标题
   const titleH1 = $("h1.mb-2.mt-1, h1").first();
   const movieNumber = titleH1.find("strong.fg-main, strong").first().text().trim();
   const titleClone = titleH1.clone();
@@ -505,22 +543,19 @@ async function loadDetail(linkValue) {
   const mainTitleText = titleClone.text().trim();
   const rawTitle = movieNumber ? `${movieNumber} ${mainTitleText}` : mainTitleText;
 
-  // ── 封面图 ──────────────────────────────────────────────────────────────────
-  // poster 参数里就有封面图 URL，直接从 iframe src 解析
+  // 封面图：优先从 iframe src 的 poster 参数解码
   let imgSrc = "";
-  try {
-    const posterMatch = iframeSrc.match(/[?&]poster=([^&]+)/);
-    if (posterMatch) {
-      imgSrc = decodeURIComponent(posterMatch[1]);
-    }
-  } catch (e) {}
+  const posterMatch = iframeSrc.match(/[?&]poster=([^&]+)/);
+  if (posterMatch) {
+    try { imgSrc = decodeURIComponent(posterMatch[1]); } catch (e) {}
+  }
   if (!imgSrc) {
     imgSrc = $(".fixed-background-img").attr("src")
       || $('meta[property="og:image"]').attr("content")
       || "";
   }
 
-  // ── 发布日期 ────────────────────────────────────────────────────────────────
+  // 发布日期
   let releaseDate = "";
   const rawDate = $('h4:contains("发片日期")').next("div").find("h4").text().trim();
   const dateMatch = rawDate.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
@@ -528,11 +563,11 @@ async function loadDetail(linkValue) {
     releaseDate = `${dateMatch[1]}-${dateMatch[2].padStart(2, "0")}-${dateMatch[3].padStart(2, "0")}`;
   }
 
-  // ── 标签 ────────────────────────────────────────────────────────────────────
+  // 标签
   const tags = [];
   $("section.movie-keywords a.badge").each((i, el) => tags.push($(el).text().trim()));
 
-  // ── 相关推荐 ────────────────────────────────────────────────────────────────
+  // 相关推荐
   const relatedItems = [];
   $("div.alike-grid-container .mgn-item").each((idx, element) => {
     try {
@@ -559,18 +594,19 @@ async function loadDetail(linkValue) {
     } catch (e) {}
   });
 
+  // ── 步骤 3：返回 type: "url"，直接播放 m3u8 ──────────────────────────────
   return {
     id: fullLink,
-    type: "webview",
+    type: "url",
     title: rawTitle || "JAVRate 影片",
-    videoUrl: playerUrl,          // /Player/V2?payload=... 完整 URL
+    videoUrl: contentUrl,
     description: tags.join(", ") || "暂无简介",
     releaseDate: releaseDate,
     genreTitle: tags.join(", "),
     backdropPath: imgSrc,
     link: fullLink,
     customHeaders: {
-      "Referer": fullLink,
+      "Referer": playerUrl,
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     },
     relatedItems: relatedItems,
