@@ -506,43 +506,50 @@ async function search(params = {}) {
   }
 
   const encodedKeyword = encodeURIComponent(keyword);
-  let searchUrl;
-  if (page === 1) {
-    searchUrl = `https://javday.app/?s=${encodedKeyword}`;
-  } else {
-    searchUrl = `https://javday.app/page/${page}/?s=${encodedKeyword}`;
-  }
+  // 构建搜索 URL，与分类分页风格保持一致
+  const searchUrl = page === 1
+    ? `https://javday.app/search/?wd=${encodedKeyword}`
+    : `https://javday.app/search/page/${page}/wd/${encodedKeyword}/`;
 
   try {
     const response = await Widget.http.get(searchUrl, {
       headers: {
         "User-Agent": JAVDAY_USER_AGENT,
-        Referer: "https://javday.app/",
+        "Referer": "https://javday.app/",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3"
       },
+      followRedirects: true // 显式跟随重定向
     });
 
-    if (!response?.data) {
-      throw new Error("无法获取搜索结果");
+    // 检查响应状态
+    if (!response || response.status !== 200) {
+      throw new Error(`HTTP ${response?.status || '未知'} - 无法获取搜索页面`);
+    }
+
+    if (!response.data) {
+      throw new Error("搜索页面内容为空");
     }
 
     const $ = Widget.html.load(response.data);
     const videoItems = [];
 
-    $(".video-wrapper .videoBox").each((index, element) => {
+    // 使用更通用的 .videoBox 选择器，兼容搜索和列表页面
+    $(".videoBox").each((index, element) => {
       const $item = $(element);
       let link = $item.attr("href");
       const title = $item.find(".videoBox-info .title").text().trim();
-      const imgSrc = getCoverImgSrc($item);
+      const imgSrc = getCoverImgSrc($item); // 复用已有的图片提取函数
 
       if (!link || !title) return;
-      
+
+      // 补全链接
       if (!link.startsWith("http")) {
-        link = link.startsWith("//") 
+        link = link.startsWith("//")
           ? `https:${link}`
           : `https://javday.app${link.startsWith("/") ? "" : "/"}${link}`;
       }
-
-      link = link.replace(/([^:]\/)\/+/g, '$1');
+      link = link.replace(/([^:]\/)\/+/g, '$1'); // 移除多余斜杠
 
       videoItems.push({
         id: `${index}|${link}`,
@@ -551,15 +558,18 @@ async function search(params = {}) {
         imgSrc: imgSrc,
         backdropPath: imgSrc,
         link: link,
-        description: `搜索: ${params.keyword}`,
+        description: `搜索: ${keyword}`,
         mediaType: "movie",
       });
     });
-    
+
+    // 如果搜索结果为空但页面正常，返回空数组而不是抛出错误
     return videoItems;
+
   } catch (error) {
     console.error(`${JAVDAY_LOG_PREFIX} 搜索失败: ${error.message}`);
-    throw error;
+    // 重新抛出错误，让上层知道搜索失败
+    throw new Error(`搜索视频失败: ${error.message}`);
   }
 }
 
