@@ -1,8 +1,8 @@
 var WidgetMetadata = {
   id: "ti.bemarkt.javrate",
   title: "JAVRate",
-  description: "获取 JAVRate 推荐",
-  author: "Ti",
+  description: "JAVRate完美播放",
+  author: "flyme修改",
   site: "https://www.javrate.com/",
   version: "2.1.1",
   requiredVersion: "0.0.1",
