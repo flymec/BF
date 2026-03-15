@@ -5,7 +5,7 @@ var WidgetMetadata = {
   description: "获取 MissAV123 热门、最新、无码视频",
   author: "改编自 flyme",
   site: "https://missav123.to",
-  version: "1.0.0",
+  version: "1.0.2",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
