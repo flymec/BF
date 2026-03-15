@@ -214,7 +214,7 @@ var WidgetMetadata = {
 
 // == Constants ================================================================
 const CONFIG = {
-  BASE_URL: "https://missav123.to/cn",
+  BASE_URL: "https://missav123.to",
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   LOG_PREFIX: "MissAV123:",
   TIMEOUT: 10000,
@@ -394,7 +394,7 @@ async function loadVr(params) {
 }
 
 async function _loadAll(type, sort_by, page = 1) {
-  const url = new URL("/cn/all", CONFIG.BASE_URL);
+  const url = new URL("/cn/all", CONFIG.BASE_URL); // 注意此处显式加上 /cn
   if (type) url.searchParams.set("type", type);
   if (sort_by) url.searchParams.set("sort", sort_by);
   if (page > 1) url.searchParams.set("page", page);
