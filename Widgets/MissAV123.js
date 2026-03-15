@@ -473,16 +473,92 @@ async function loadDetail(link) {
   const html = await httpGet(fullLink, fullLink);
   const $ = Widget.html.load(html);
 
-  const videoUrl = extractVideoUrl($);
-  if (!videoUrl) throw new Error("无法找到视频源");
+  // 尝试常规提取（video 标签、iframe、script 中的 URL）
+  let videoUrl = extractVideoUrl($);
+
+  // 提取 itemid
+  const itemId = $('d-tag[src="WatchFiles"]').attr('itemid') ||
+                 $('[itemid]').attr('itemid');
+
+  // 如果没有 videoUrl 但有 itemid，尝试请求 API 获取
+  if (!videoUrl && itemId) {
+    // 候选 API 端点（根据常见 JAV 网站模式推测）
+    const apiEndpoints = [
+      `/ajax/video/${itemId}`,
+      `/api/video/${itemId}`,
+      `/cn/ajax/video/${itemId}`,
+      `/cn/video/${itemId}/play`,
+      `/play/${itemId}`,
+      `/hls/${itemId}/playlist.m3u8`,        // 直接尝试 HLS 路径
+      `/hls/${itemId}/master.m3u8`,
+    ];
+
+    for (const endpoint of apiEndpoints) {
+      try {
+        const apiUrl = normalizeUrl(endpoint);
+        const response = await httpGet(apiUrl, fullLink);
+        
+        // 尝试解析 JSON
+        try {
+          const data = JSON.parse(response);
+          videoUrl = data.url || data.videoUrl || data.data?.url || data.file;
+          if (videoUrl) break;
+        } catch {
+          // 如果响应是纯文本，可能是 m3u8 内容或直接 URL
+          if (response.startsWith('http') && /\.(m3u8|mp4)/i.test(response)) {
+            videoUrl = response.trim();
+            break;
+          }
+          // 检查是否返回了 m3u8 内容（以 #EXTM3U 开头）
+          if (response.trim().startsWith('#EXTM3U')) {
+            // 如果返回的是 m3u8 内容，可能需要保存为临时链接，但通常 API 会返回 URL
+            // 此处暂不处理，继续下一个端点
+          }
+        }
+      } catch (e) {
+        console.log(`API ${endpoint} 失败`, e.message);
+      }
+    }
+  }
+
+  // 如果仍无结果，尝试解密 data-url（简单 Base64 解码）
+  if (!videoUrl) {
+    const dataUrl = $('#video-files .file').attr('data-url');
+    if (dataUrl) {
+      try {
+        // 尝试 Base64 解码（使用 Widget 提供的工具，如果支持）
+        const decoded = Widget.utils?.base64Decode ? Widget.utils.base64Decode(dataUrl) : atob(dataUrl);
+        if (decoded.includes('http')) {
+          videoUrl = decoded;
+        }
+      } catch (e) {
+        console.log('data-url 解码失败', e);
+      }
+    }
+  }
+
+  // 如果还是找不到，回退到返回详情页 URL（让播放器以 iframe 加载）
+  if (!videoUrl) {
+    console.warn('无法提取视频源，返回详情页 URL，尝试 iframe 播放');
+    return {
+      id: fullLink,
+      type: 'iframe',       // 需要播放器支持 iframe 类型
+      url: fullLink,
+      customHeaders: {
+        'Referer': fullLink,
+        'User-Agent': CONFIG.USER_AGENT,
+      },
+    };
+  }
 
   return {
     id: fullLink,
-    type: "url",
+    type: 'url',
     videoUrl: videoUrl,
     customHeaders: {
-      Referer: fullLink,
-      "User-Agent": CONFIG.USER_AGENT,
+      'Referer': fullLink,
+      'User-Agent': CONFIG.USER_AGENT,
+      'Origin': new URL(fullLink).origin,
     },
   };
 }
