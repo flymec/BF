@@ -1,14 +1,14 @@
+// == Metadata =================================================================
 var WidgetMetadata = {
   id: "ti.bemarkt.javday",
-  title: "JAVDayss",
+  title: "JAVDay",
   description: "获取 JAVDay 推荐",
-  author: "00",
+  author: "flyme",
   site: "https://javday.app",
-  version: "1.1.2",
+  version: "1.5.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
-    // 搜索模块
     {
       title: "搜索视频",
       description: "搜索JAVDay视频库",
@@ -23,15 +23,9 @@ var WidgetMetadata = {
           value: "",
           description: "女優/番號/關鍵字搜索…",
         },
-        { 
-          name: "page", 
-          title: "页码", 
-          type: "page", 
-          description: "搜索结果页码" 
-        }
+        { name: "page", title: "页码", type: "page", description: "搜索结果页码" }
       ]
     },
-    // 最新模块
     {
       title: "最新更新",
       description: "浏览最新更新视频",
@@ -39,21 +33,10 @@ var WidgetMetadata = {
       functionName: "loadPage",
       cacheDuration: 3600,
       params: [
-        {
-          name: "url",
-          title: "列表地址",
-          type: "constant",
-          description: "列表地址",
-          value: "https://javday.app/label/new/"
-        },
-        {
-          name: "page",
-          title: "页码",
-          type: "page"
-        }
+        { name: "url", title: "列表地址", type: "constant", value: "https://javday.app/label/new/" },
+        { name: "page", title: "页码", type: "page" }
       ]
     },
-    // 人气模块
     {
       title: "人气系列",
       description: "浏览人气系列视频",
@@ -61,21 +44,10 @@ var WidgetMetadata = {
       functionName: "loadPage",
       cacheDuration: 3600,
       params: [
-        {
-          name: "url",
-          title: "列表地址",
-          type: "constant",
-          description: "列表地址",
-          value: "https://javday.app/label/hot/"
-        },
-        {
-          name: "page",
-          title: "页码",
-          type: "page"
-        }
+        { name: "url", title: "列表地址", type: "constant", value: "https://javday.app/label/hot/" },
+        { name: "page", title: "页码", type: "page" }
       ]
     },
-    // 新作模块
     {
       title: "新作上市",
       description: "浏览新作上市视频",
@@ -83,32 +55,18 @@ var WidgetMetadata = {
       functionName: "loadPage",
       cacheDuration: 3600,
       params: [
+        { name: "url", title: "列表地址", type: "constant", value: "https://javday.app/category/new-release/" },
         {
-          name: "url",
-          title: "列表地址",
-          type: "constant",
-          description: "列表地址",
-          value: "https://javday.app/category/new-release/"
-        },
-        {
-          name: "sort_by",
-          title: "排序方式",
-          type: "enumeration",
+          name: "sort_by", title: "排序方式", type: "enumeration",
           enumOptions: [
             { title: "最新上架", value: "new" },
             { title: "人气最高", value: "popular" }
           ],
-          description: "选择视频排序方式",
           value: "new"
         },
-        {
-          name: "page",
-          title: "页码",
-          type: "page"
-        }
+        { name: "page", title: "页码", type: "page" }
       ]
     },
-    // 有码模块
     {
       title: "有码视频",
       description: "浏览有码分类视频",
@@ -116,32 +74,18 @@ var WidgetMetadata = {
       functionName: "loadPage",
       cacheDuration: 3600,
       params: [
+        { name: "url", title: "列表地址", type: "constant", value: "https://javday.app/category/censored/" },
         {
-          name: "url",
-          title: "列表地址",
-          type: "constant",
-          description: "列表地址",
-          value: "https://javday.app/category/censored/"
-        },
-        {
-          name: "sort_by",
-          title: "排序方式",
-          type: "enumeration",
+          name: "sort_by", title: "排序方式", type: "enumeration",
           enumOptions: [
             { title: "最新上架", value: "new" },
             { title: "人气最高", value: "popular" }
           ],
-          description: "选择视频排序方式",
           value: "popular"
         },
-        {
-          name: "page",
-          title: "页码",
-          type: "page"
-        }
+        { name: "page", title: "页码", type: "page" }
       ]
     },
-    // 无码模块
     {
       title: "无码视频",
       description: "浏览无码分类视频",
@@ -149,32 +93,18 @@ var WidgetMetadata = {
       functionName: "loadPage",
       cacheDuration: 3600,
       params: [
+        { name: "url", title: "列表地址", type: "constant", value: "https://javday.app/category/uncensored/" },
         {
-          name: "url",
-          title: "列表地址",
-          type: "constant",
-          description: "列表地址",
-          value: "https://javday.app/category/uncensored/"
-        },
-        {
-          name: "sort_by",
-          title: "排序方式",
-          type: "enumeration",
+          name: "sort_by", title: "排序方式", type: "enumeration",
           enumOptions: [
             { title: "最新上架", value: "new" },
             { title: "人气最高", value: "popular" }
           ],
-          description: "选择视频排序方式",
           value: "new"
         },
-        {
-          name: "page",
-          title: "页码",
-          type: "page"
-        }
+        { name: "page", title: "页码", type: "page" }
       ]
     },
-    // 流出模块
     {
       title: "无码流出",
       description: "浏览无码流出视频",
@@ -182,32 +112,18 @@ var WidgetMetadata = {
       functionName: "loadPage",
       cacheDuration: 3600,
       params: [
+        { name: "url", title: "列表地址", type: "constant", value: "https://javday.app/category/uncensored-leaked/" },
         {
-          name: "url",
-          title: "列表地址",
-          type: "constant",
-          description: "列表地址",
-          value: "https://javday.app/category/uncensored-leaked/"
-        },
-        {
-          name: "sort_by",
-          title: "排序方式",
-          type: "enumeration",
+          name: "sort_by", title: "排序方式", type: "enumeration",
           enumOptions: [
             { title: "最新上架", value: "new" },
             { title: "人气最高", value: "popular" }
           ],
-          description: "选择视频排序方式",
           value: "new"
         },
-        {
-          name: "page",
-          title: "页码",
-          type: "page"
-        }
+        { name: "page", title: "页码", type: "page" }
       ]
     },
-    // 杏吧模块
     {
       title: "杏吧视频",
       description: "浏览杏吧分类视频",
@@ -215,32 +131,18 @@ var WidgetMetadata = {
       functionName: "loadPage",
       cacheDuration: 3600,
       params: [
+        { name: "url", title: "列表地址", type: "constant", value: "https://javday.app/category/sex8/" },
         {
-          name: "url",
-          title: "列表地址",
-          type: "constant",
-          description: "列表地址",
-          value: "https://javday.app/category/sex8/"
-        },
-        {
-          name: "sort_by",
-          title: "排序方式",
-          type: "enumeration",
+          name: "sort_by", title: "排序方式", type: "enumeration",
           enumOptions: [
             { title: "最新上架", value: "new" },
             { title: "人气最高", value: "popular" }
           ],
-          description: "选择视频排序方式",
           value: "popular"
         },
-        {
-          name: "page",
-          title: "页码",
-          type: "page"
-        }
+        { name: "page", title: "页码", type: "page" }
       ]
     },
-    // 玩偶模块
     {
       title: "玩偶姐姐",
       description: "浏览玩偶姐姐视频",
@@ -248,32 +150,18 @@ var WidgetMetadata = {
       functionName: "loadPage",
       cacheDuration: 3600,
       params: [
+        { name: "url", title: "列表地址", type: "constant", value: "https://javday.app/category/hongkongdoll/" },
         {
-          name: "url",
-          title: "列表地址",
-          type: "constant",
-          description: "列表地址",
-          value: "https://javday.app/category/hongkongdoll/"
-        },
-        {
-          name: "sort_by",
-          title: "排序方式",
-          type: "enumeration",
+          name: "sort_by", title: "排序方式", type: "enumeration",
           enumOptions: [
             { title: "最新上架", value: "new" },
             { title: "人气最高", value: "popular" }
           ],
-          description: "选择视频排序方式",
           value: "popular"
         },
-        {
-          name: "page",
-          title: "页码",
-          type: "page"
-        }
+        { name: "page", title: "页码", type: "page" }
       ]
     },
-    // 国产模块
     {
       title: "国产 AV",
       description: "浏览国产 AV视频",
@@ -281,32 +169,18 @@ var WidgetMetadata = {
       functionName: "loadPage",
       cacheDuration: 3600,
       params: [
+        { name: "url", title: "列表地址", type: "constant", value: "https://javday.app/category/chinese-av/" },
         {
-          name: "url",
-          title: "列表地址",
-          type: "constant",
-          description: "列表地址",
-          value: "https://javday.app/category/chinese-av/"
-        },
-        {
-          name: "sort_by",
-          title: "排序方式",
-          type: "enumeration",
+          name: "sort_by", title: "排序方式", type: "enumeration",
           enumOptions: [
             { title: "最新上架", value: "new" },
             { title: "人气最高", value: "popular" }
           ],
-          description: "选择视频排序方式",
           value: "popular"
         },
-        {
-          name: "page",
-          title: "页码",
-          type: "page"
-        }
+        { name: "page", title: "页码", type: "page" }
       ]
     },
-    // 厂商模块
     {
       title: "国产厂商",
       description: "按厂商标签浏览国产厂商视频",
@@ -315,234 +189,64 @@ var WidgetMetadata = {
       cacheDuration: 3600,
       params: [
         {
-          name: "url",
-          title: "厂商选择",
-          type: "enumeration",
-          belongTo: {
-            paramName: "sort_by",
-            value: ["new","popular"],
-            },
-          enumOptions: [ 
-            { title: "麻豆传媒", value: "https://javday.app/index.php/category/madou/" }, 
-            { title: "果冻传媒", value: "https://javday.app/index.php/category/91zhipianchang/" }, 
-            { title: "天美传媒", value: "https://javday.app/index.php/category/timi/" }, 
-            { title: "星空无限", value: "https://javday.app/index.php/category/xingkong/" }, 
-            { title: "皇家华人", value: "https://javday.app/index.php/category/royalasianstudio/" }, 
-            { title: "蜜桃影像", value: "https://javday.app/index.php/category/mtgw/" }, 
-            { title: "精东影业", value: "https://javday.app/index.php/category/jdav/" }, 
-            { title: "台湾 AV", value: "https://javday.app/index.php/category/twav/" }, 
-            { title: "JVID", value: "https://javday.app/index.php/category/jvid/" }, 
-            { title: "萝莉社", value: "https://javday.app/index.php/category/luolisheus/" }, 
-            { title: "糖心VLOG", value: "https://javday.app/index.php/category/txvlog/" }, 
-            { title: "Psychoporn TW", value: "https://javday.app/index.php/category/psychoporn-tw/" } 
+          name: "url", title: "厂商选择", type: "enumeration",
+          enumOptions: [
+            { title: "麻豆传媒", value: "https://javday.app/index.php/category/madou/" },
+            { title: "果冻传媒", value: "https://javday.app/index.php/category/91zhipianchang/" },
+            { title: "天美传媒", value: "https://javday.app/index.php/category/timi/" },
+            { title: "星空无限", value: "https://javday.app/index.php/category/xingkong/" },
+            { title: "皇家华人", value: "https://javday.app/index.php/category/royalasianstudio/" },
+            { title: "蜜桃影像", value: "https://javday.app/index.php/category/mtgw/" },
+            { title: "精东影业", value: "https://javday.app/index.php/category/jdav/" },
+            { title: "台湾 AV", value: "https://javday.app/index.php/category/twav/" },
+            { title: "JVID", value: "https://javday.app/index.php/category/jvid/" },
+            { title: "萝莉社", value: "https://javday.app/index.php/category/luolisheus/" },
+            { title: "糖心VLOG", value: "https://javday.app/index.php/category/txvlog/" },
+            { title: "Psychoporn TW", value: "https://javday.app/index.php/category/psychoporn-tw/" }
           ],
           value: "https://javday.app/index.php/category/madou/",
-          description: "选择要浏览的厂商"
         },
         {
-          name: "sort_by",
-          title: "🔢 排序方式",
-          type: "enumeration",
+          name: "sort_by", title: "排序方式", type: "enumeration",
           enumOptions: [
             { title: "最新上架", value: "new" },
             { title: "人气最高", value: "popular" }
           ],
-          value: "new",
-          description: "选择视频排序方式"
+          value: "new"
         },
-        {
-          name: "page",
-          title: "页码",
-          type: "page"
-        }
+        { name: "page", title: "页码", type: "page" }
       ]
     }
   ]
 };
 
-const JAVDAY_LOG_PREFIX = "ForwardWidget: JAVDay -";
-const JAVDAY_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36";
+// == Constants ================================================================
+const CONFIG = {
+  BASE_URL: "https://javday.app",
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  LOG_PREFIX: "ForwardWidget: JAVDay -",
+  TIMEOUT: 15000,
+};
 
-function extractCategoryId(url) {
-  const match = url.match(/\/([^/]+)\/?$/);
-  if (match && match[1]) {
-    return match[1].replace(/\/+$/, '');
-  }
-  
-  const parts = url.split('/').filter(part => part.length > 0);
-  return parts[parts.length - 1] || url.split('/').slice(-2, -1)[0] || 'unknown';
-}
+// == Global variable for cookie handling ======================================
+let globalHomeCookie = false;
 
-function buildPageUrl(baseUrl, sortBy, page) {
-  const categoryId = extractCategoryId(baseUrl);
-  
-  const cleanBaseUrl = baseUrl.replace(/index\.php\//g, '');
-  
-  let path;
-  if (sortBy === "popular") {
-    path = `/fiter/by/hits/id/${categoryId}`;
-  } else {
-    path = cleanBaseUrl.includes('label/') 
-      ? cleanBaseUrl.replace(/\/page\/\d+\/?$/, '')
-      : `/category/${categoryId}`;
-  }
-  
-  if (page > 1) {
-    return `${path}/page/${page}/`;
-  }
-  
-  return `${path}/`;
-}
+// == Utility Functions ========================================================
 
-function getFullUrl(path) {
-  if (path.startsWith("http")) return path;
-  
-  return `https://javday.app${path}`;
-}
-
-function getCoverImgSrc($item) {
-  const coverElement = $item.find(".videoBox-cover");
-  const styleAttr = coverElement.attr("style");
-  
-  if (styleAttr) {
-    const match = styleAttr.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/);
-    if (match && match[1]) {
-      const extractedUrl = match[1];
-      
-      if (extractedUrl.startsWith("//")) {
-        return `https:${extractedUrl}`;
-      } 
-      
-      if (extractedUrl.startsWith("http")) {
-        return extractedUrl;
-      }
-      
-      return `https://javday.app${extractedUrl.startsWith("/") ? "" : "/"}${extractedUrl}`;
-    }
-  }
-  return "";
-}
-
-function extractVideoUrlFromDPlayerScript(scriptContent) {
-  if (!scriptContent) return null;
-  
-  const regexes = [
-    /video\s*:\s*{\s*[^}]*url\s*:\s*['"]([^'"]+)['"]/,
-    /url\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/
-  ];
-  
-  for (const regex of regexes) {
-    const match = scriptContent.match(regex);
-    if (match && match[1]) return match[1];
-  }
-  
-  return null;
-}
-
-async function loadPage(params = {}) {
-  const baseUrl = params.url;
-  const sortBy = params.sort_by || "new";
-  const page = parseInt(params.page, 10) || 1;
-  
-  const pagePath = buildPageUrl(baseUrl, sortBy, page);
-  const targetUrl = getFullUrl(pagePath);
-
-  try {
-    const response = await Widget.http.get(targetUrl, {
-      headers: {
-        "User-Agent": JAVDAY_USER_AGENT,
-        Referer: "https://javday.app/",
-      },
-    });
-
-    if (!response?.data) {
-      throw new Error("无法获取页面内容");
-    }
-
-    const $ = Widget.html.load(response.data);
-    const videoItems = [];
-
-    $(".video-wrapper .videoBox").each((index, element) => {
-      const $item = $(element);
-      let link = $item.attr("href");
-      const title = $item.find(".videoBox-info .title").text().trim();
-      const imgSrc = getCoverImgSrc($item);
-
-      if (!link || !title) return;
-      
-      if (!link.startsWith("http")) {
-        link = link.startsWith("//") 
-          ? `https:${link}`
-          : `https://javday.app${link.startsWith("/") ? "" : "/"}${link}`;
-      }
-
-      link = link.replace(/([^:]\/)\/+/g, '$1');
-
-      videoItems.push({
-        id: `${index}|${link}`,
-        type: "url",
-        title: title,
-        imgSrc: imgSrc,
-        backdropPath: imgSrc,
-        link: link,
-        description: `来自JAVDay | 排序:${sortBy === "new" ? "最新上架" : "人气最高"}`,
-        mediaType: "movie",
-      });
-    });
-    
-    return videoItems;
-  } catch (error) {
-    console.error(`${JAVDAY_LOG_PREFIX} 获取视频失败: ${error.message}`);
-    throw error;
-  }
-}
-
-async function search(params = {}) {
-  const keyword = params.keyword || "";
-  const page = parseInt(params.page, 10) || 1;
-  
-  if (!keyword) {
-    throw new Error("请输入搜索关键词");
-  }
-
-  const encodedKeyword = encodeURIComponent(keyword);
-
-  // 第一步：访问首页获取可能的Cookie（如果Widget自动管理Cookie可省略，但为保险保留）
-  let cookies = '';
-  try {
-    const homeResp = await Widget.http.get("https://javday.app/", {
-      headers: {
-        "User-Agent": JAVDAY_USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-      },
-      followRedirects: true,
-    });
-    // 如果响应头中包含set-cookie，Widget可能自动保存，此处仅记录
-    if (homeResp.headers && homeResp.headers['set-cookie']) {
-      // 某些环境可能需要手动提取cookies
-      console.log(`${JAVDAY_LOG_PREFIX} 获取到首页Cookie`);
-    }
-  } catch (e) {
-    console.warn(`${JAVDAY_LOG_PREFIX} 访问首页获取Cookie失败，继续尝试搜索`);
-  }
-
-  // 准备搜索URL列表（优先路径格式，备选查询格式）
-  const urlFormats = [
-    page === 1
-      ? `https://javday.app/search/wd/${encodedKeyword}/`
-      : `https://javday.app/search/wd/${encodedKeyword}/page/${page}/`,
-    page === 1
-      ? `https://javday.app/search/?wd=${encodedKeyword}`
-      : `https://javday.app/search/?wd=${encodedKeyword}&page=${page}`
-  ];
-
-  // 请求头（模拟最新Chrome）
+/**
+ * 发送 HTTP GET 请求（增强版：完整浏览器头、自动处理 Cookie）
+ * @param {string} url 请求地址
+ * @param {string} referer Referer 头，默认使用 BASE_URL
+ * @param {boolean} retryWithHomeCookie 是否尝试获取首页 Cookie
+ * @returns {Promise<string>} HTML 内容
+ */
+async function httpGet(url, referer = CONFIG.BASE_URL, retryWithHomeCookie = true) {
   const headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Referer": "https://javday.app/",
+    "User-Agent": CONFIG.USER_AGENT,
+    "Referer": referer,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br", // 如果Widget不支持解压，请移除或改为 identity
+    "Accept-Encoding": "gzip, deflate, br", // 若运行环境不支持自动解压，请删除此行
     "Connection": "keep-alive",
     "Upgrade-Insecure-Requests": "1",
     "Sec-Fetch-Dest": "document",
@@ -550,212 +254,312 @@ async function search(params = {}) {
     "Sec-Fetch-Site": "same-origin",
     "Sec-Fetch-User": "?1",
     "Cache-Control": "max-age=0",
-    // 如果已经有固定Cookie，可手动添加，例如：
-    // "Cookie": "__cfduid=xxxx; _ga=xxxx;"
   };
 
-  let lastError = null;
-
-  // 尝试GET请求
-  for (const searchUrl of urlFormats) {
+  // 首次请求或需要 Cookie 时，先访问首页以获取可能的 Cookie（Widget 可能自动保存）
+  if (retryWithHomeCookie && !globalHomeCookie) {
     try {
-      const response = await Widget.http.get(searchUrl, {
-        headers: headers,
+      await Widget.http.get(CONFIG.BASE_URL, {
+        headers: { "User-Agent": CONFIG.USER_AGENT },
         followRedirects: true,
-        timeout: 15000,
       });
-
-      if (!response || response.status !== 200) {
-        lastError = new Error(`HTTP ${response?.status}`);
-        // 打印部分响应内容便于调试
-        if (response?.data) {
-          console.error(`${JAVDAY_LOG_PREFIX} 响应片段: ${response.data.substring(0, 300)}`);
-        }
-        continue;
-      }
-
-      if (!response.data) {
-        lastError = new Error("空响应");
-        continue;
-      }
-
-      const $ = Widget.html.load(response.data);
-      const videoItems = [];
-
-      $(".videoBox").each((index, element) => {
-        const $item = $(element);
-        let link = $item.attr("href");
-        const title = $item.find(".videoBox-info .title").text().trim();
-        const imgSrc = getCoverImgSrc($item);
-
-        if (!link || !title) return;
-
-        if (!link.startsWith("http")) {
-          link = link.startsWith("//")
-            ? `https:${link}`
-            : `https://javday.app${link.startsWith("/") ? "" : "/"}${link}`;
-        }
-        link = link.replace(/([^:]\/)\/+/g, '$1');
-
-        videoItems.push({
-          id: `${index}|${link}`,
-          type: "url",
-          title: title,
-          imgSrc: imgSrc,
-          backdropPath: imgSrc,
-          link: link,
-          description: `搜索: ${keyword}`,
-          mediaType: "movie",
-        });
-      });
-
-      return videoItems;
-
-    } catch (error) {
-      lastError = error;
+      globalHomeCookie = true; // 标记已尝试
+    } catch (e) {
+      console.warn(`${CONFIG.LOG_PREFIX} 获取首页 Cookie 失败，继续请求`);
     }
   }
 
-  // 如果GET全部失败，尝试POST方式（模拟表单提交）
   try {
-    const postUrl = "https://javday.app/search/";
-    const formData = `wd=${encodedKeyword}`; // 如果分页，可能需要其他参数，此处简化
-    const postResponse = await Widget.http.post(postUrl, formData, {
-      headers: {
-        ...headers,
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Origin": "https://javday.app",
-      },
+    const response = await Widget.http.get(url, {
+      headers: headers,
       followRedirects: true,
-      timeout: 15000,
+      timeout: CONFIG.TIMEOUT,
     });
 
-    if (postResponse && postResponse.status === 200 && postResponse.data) {
-      const $ = Widget.html.load(postResponse.data);
-      const videoItems = [];
-      $(".videoBox").each((index, element) => {
-        // 同上解析逻辑
-        const $item = $(element);
-        let link = $item.attr("href");
-        const title = $item.find(".videoBox-info .title").text().trim();
-        const imgSrc = getCoverImgSrc($item);
-        if (!link || !title) return;
-        if (!link.startsWith("http")) {
-          link = link.startsWith("//") ? `https:${link}` : `https://javday.app${link.startsWith("/") ? "" : "/"}${link}`;
-        }
-        link = link.replace(/([^:]\/)\/+/g, '$1');
-        videoItems.push({
-          id: `${index}|${link}`,
-          type: "url",
-          title: title,
-          imgSrc: imgSrc,
-          backdropPath: imgSrc,
-          link: link,
-          description: `搜索: ${keyword}`,
-          mediaType: "movie",
-        });
-      });
-      return videoItems;
+    if (!response) throw new Error("无响应");
+    if (response.status !== 200) {
+      const snippet = response.data ? response.data.substring(0, 300) : '无内容';
+      console.error(`${CONFIG.LOG_PREFIX} HTTP ${response.status}，响应片段: ${snippet}`);
+      throw new Error(`HTTP ${response.status}`);
     }
-  } catch (postError) {
-    lastError = postError;
-  }
+    if (!response.data) throw new Error("响应内容为空");
 
-  console.error(`${JAVDAY_LOG_PREFIX} 所有尝试均失败: ${lastError?.message}`);
-  throw new Error(`搜索视频失败: 请检查网络或联系管理员 (最后错误: ${lastError?.message})`);
-}
-
-async function loadDetail(link) {
-  
-  try {
-    const response = await Widget.http.get(link, {
-      headers: {
-        "User-Agent": JAVDAY_USER_AGENT,
-        Referer: link,
-      },
-    });
-
-    if (!response?.data) {
-      throw new Error("无法获取详情页内容");
-    }
-
-    const $ = Widget.html.load(response.data);
-    
-    const dplayerScript = Array.from($("script"))
-      .find(el => {
-        const scriptContent = $(el).html();
-        return scriptContent && scriptContent.includes("new DPlayer");
-      });
-    
-    if (dplayerScript) {
-      const scriptContent = $(dplayerScript).html();
-      const videoUrl = extractVideoUrlFromDPlayerScript(scriptContent);
-      if (videoUrl) {
-        return {
-          id: link,
-          type: "url",
-          videoUrl: videoUrl,
-          customHeaders: {
-            Referer: link,
-            "User-Agent": JAVDAY_USER_AGENT,
-          },
-        };
-      }
-    }
-    
-    const videoSrc = $("video#J_prismPlayer").attr("src") || 
-                   $("source[src*='.m3u8']").attr("src") ||
-                   $("video source").attr("src");
-    
-    if (videoSrc) {
-      return {
-        id: link,
-        type: "url",
-        videoUrl: videoSrc,
-        customHeaders: {
-          Referer: link,
-            "User-Agent": JAVDAY_USER_AGENT,
-          },
-        };
-      }
-      
-      const scriptSources = Array.from($("script"))
-      .map(el => $(el).html())
-      .find(content => content && content.includes(".m3u8"));
-    
-    if (scriptSources) {
-      const m3u8Match = scriptSources.match(/['"](https?:\/\/[^'"]+\.m3u8[^'"]*)['"]/);
-      if (m3u8Match && m3u8Match[1]) {
-        return {
-          id: link,
-          type: "url",
-          videoUrl: m3u8Match[1],
-          customHeaders: {
-            Referer: link,
-            "User-Agent": JAVDAY_USER_AGENT,
-          },
-        };
-      }
-    }
-
-    const playerVideo = $("video[src]").attr("src") || 
-                      $("iframe[src*='player']").attr("src");
-    
-    if (playerVideo) {
-      return {
-        id: link,
-        type: "url",
-        videoUrl: playerVideo,
-        customHeaders: {
-          Referer: link,
-          "User-Agent": JAVDAY_USER_AGENT,
-        },
-      };
-    }
-
-    throw new Error("无法找到视频源");
+    return response.data;
   } catch (error) {
-    console.error(`${JAVDAY_LOG_PREFIX} 加载详情失败: ${error.message}`);
+    console.error(`${CONFIG.LOG_PREFIX} 请求失败: ${url}`, error.message);
     throw error;
   }
+}
+
+/**
+ * 将相对 URL 转换为绝对 URL
+ * @param {string} url 原始 URL
+ * @returns {string} 绝对 URL
+ */
+function normalizeUrl(url) {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (url.startsWith("//")) return `https:${url}`;
+  const base = CONFIG.BASE_URL.replace(/\/+$/, "");
+  const path = url.startsWith("/") ? url : `/${url}`;
+  return (base + path).replace(/([^:]\/)\/+/g, "$1");
+}
+
+/**
+ * 从元素的 style 属性中提取背景图片 URL
+ * @param {Cheerio} $item 视频项 cheerio 对象
+ * @returns {string} 图片 URL
+ */
+function getCoverImgSrc($item) {
+  const styleAttr = $item.find(".videoBox-cover").attr("style");
+  if (!styleAttr) return "";
+  const match = styleAttr.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/);
+  if (!match || !match[1]) return "";
+  return normalizeUrl(match[1]);
+}
+
+/**
+ * 解析视频列表页的 DOM，提取视频项（使用更通用的选择器 .videoBox）
+ * @param {Cheerio} $ cheerio 实例
+ * @param {string} context 描述信息（用于返回值）
+ * @returns {Array} 视频项数组
+ */
+function parseVideoList($, context = "来自 JAVDay") {
+  const items = [];
+  $(".videoBox").each((index, element) => {
+    const $item = $(element);
+    const link = $item.attr("href");
+    const title = $item.find(".videoBox-info .title").text().trim();
+    const imgSrc = getCoverImgSrc($item);
+
+    if (!link || !title) return;
+
+    items.push({
+      id: `${index}|${link}`,
+      type: "url",
+      title: title,
+      imgSrc: imgSrc,
+      backdropPath: imgSrc,
+      link: normalizeUrl(link),
+      description: context,
+      mediaType: "movie",
+    });
+  });
+  return items;
+}
+
+/**
+ * 从 DPlayer 脚本内容中提取视频 URL
+ * @param {string} scriptContent 脚本内容
+ * @returns {string|null} 视频 URL
+ */
+function extractVideoUrlFromDPlayerScript(scriptContent) {
+  if (!scriptContent) return null;
+  const regexes = [
+    /video\s*:\s*{\s*[^}]*url\s*:\s*['"]([^'"]+)['"]/,
+    /url\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/,
+  ];
+  for (const regex of regexes) {
+    const match = scriptContent.match(regex);
+    if (match && match[1]) return match[1];
+  }
+  return null;
+}
+
+/**
+ * 从详情页 DOM 中提取视频源（综合多种方式）
+ * @param {Cheerio} $ cheerio 实例
+ * @returns {string|null} 视频 URL
+ */
+function extractVideoUrl($) {
+  // 1. 查找 DPlayer 脚本
+  const dplayerScript = Array.from($("script")).find(el => {
+    const content = $(el).html();
+    return content && content.includes("new DPlayer");
+  });
+  if (dplayerScript) {
+    const url = extractVideoUrlFromDPlayerScript($(dplayerScript).html());
+    if (url) return url;
+  }
+
+  // 2. 常见 video 标签
+  const videoSrc = $("video#J_prismPlayer").attr("src") ||
+                   $("source[src*='.m3u8']").attr("src") ||
+                   $("video source").attr("src");
+  if (videoSrc) return videoSrc;
+
+  // 3. 脚本中内联的 m3u8 地址
+  const scriptContents = Array.from($("script")).map(el => $(el).html());
+  for (const content of scriptContents) {
+    if (content && content.includes(".m3u8")) {
+      const match = content.match(/['"](https?:\/\/[^'"]+\.m3u8[^'"]*)['"]/);
+      if (match && match[1]) return match[1];
+    }
+  }
+
+  // 4. iframe 嵌入
+  const iframeSrc = $("iframe[src*='player']").attr("src");
+  if (iframeSrc) return normalizeUrl(iframeSrc);
+
+  return null;
+}
+
+/**
+ * 从 URL 中提取分类/标签 ID（用于构建人气排序路径）
+ * @param {string} url 基础 URL
+ * @returns {string} ID
+ */
+function extractCategoryId(url) {
+  const parts = url.split("/").filter(p => p && p !== "index.php");
+  return parts.pop() || "unknown";
+}
+
+/**
+ * 构建分页 URL（支持排序）
+ * @param {string} baseUrl 基础 URL（如分类页、标签页）
+ * @param {string} sortBy 排序方式 new / popular
+ * @param {number} page 页码
+ * @returns {string} 完整分页 URL
+ */
+function buildPageUrl(baseUrl, sortBy, page) {
+  const cleanBase = baseUrl.replace(/\/+$/, "").replace(/\/page\/\d+$/, "");
+  const id = extractCategoryId(cleanBase);
+  const isLabel = cleanBase.includes("/label/");
+
+  let path;
+  if (sortBy === "popular") {
+    path = `/fiter/by/hits/id/${id}/`;
+  } else {
+    path = isLabel ? `/label/${id}/` : `/category/${id}/`;
+  }
+
+  if (cleanBase.includes("index.php")) {
+    path = `/index.php${path}`;
+  }
+
+  if (page > 1) {
+    path += `page/${page}/`;
+  }
+
+  return path;
+}
+
+/**
+ * 将路径转换为完整 URL
+ * @param {string} path 路径
+ * @returns {string} 完整 URL
+ */
+function getFullUrl(path) {
+  if (path.startsWith("http")) return path;
+  return `${CONFIG.BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+// == Core Functions ===========================================================
+
+/**
+ * 加载通用列表页（分类/标签/厂商）
+ * @param {Object} params 参数 { url, sort_by, page }
+ * @returns {Promise<Array>} 视频项数组
+ */
+async function loadPage(params = {}) {
+  const { url, sort_by = "new", page = 1 } = params;
+  if (!url) throw new Error("缺少 URL 参数");
+
+  let targetUrl;
+  if (sort_by === "popular") {
+    const popularPath = buildPageUrl(url, "popular", page);
+    targetUrl = getFullUrl(popularPath);
+  } else {
+    const normalPath = buildPageUrl(url, "new", page);
+    targetUrl = getFullUrl(normalPath);
+  }
+
+  try {
+    const html = await httpGet(targetUrl, url);
+    const $ = Widget.html.load(html);
+    const items = parseVideoList($, `排序:${sort_by === "new" ? "最新" : "人气"}`);
+
+    if (items.length === 0 && sort_by === "popular") {
+      console.warn(`${CONFIG.LOG_PREFIX} 人气路径无数据，降级到普通路径`);
+      const fallbackPath = buildPageUrl(url, "new", page);
+      const fallbackHtml = await httpGet(getFullUrl(fallbackPath), url);
+      const $fallback = Widget.html.load(fallbackHtml);
+      return parseVideoList($fallback, "排序:最新(人气降级)");
+    }
+
+    return items;
+  } catch (error) {
+    if (sort_by === "popular") {
+      console.warn(`${CONFIG.LOG_PREFIX} 人气路径请求失败，尝试降级`, error.message);
+      const fallbackPath = buildPageUrl(url, "new", page);
+      const fallbackHtml = await httpGet(getFullUrl(fallbackPath), url);
+      const $fallback = Widget.html.load(fallbackHtml);
+      return parseVideoList($fallback, "排序:最新(人气降级)");
+    }
+    throw error;
+  }
+}
+
+/**
+ * 搜索视频（支持备用 URL 格式）
+ * @param {Object} params 参数 { keyword, page }
+ * @returns {Promise<Array>} 视频项数组
+ */
+async function search(params = {}) {
+  const { keyword, page = 1 } = params;
+  if (!keyword) throw new Error("请输入搜索关键词");
+
+  const encodedKeyword = encodeURIComponent(keyword);
+  
+  const urlFormats = [
+    page === 1
+      ? `${CONFIG.BASE_URL}/search/wd/${encodedKeyword}/`
+      : `${CONFIG.BASE_URL}/search/wd/${encodedKeyword}/page/${page}/`,
+    page === 1
+      ? `${CONFIG.BASE_URL}/search/?wd=${encodedKeyword}`
+      : `${CONFIG.BASE_URL}/search/?wd=${encodedKeyword}&page=${page}`
+  ];
+
+  let lastError = null;
+  for (const searchUrl of urlFormats) {
+    try {
+      const html = await httpGet(searchUrl, CONFIG.BASE_URL, true);
+      const $ = Widget.html.load(html);
+      const items = parseVideoList($, `搜索: ${keyword}`);
+      if (items.length > 0) {
+        return items;
+      } else {
+        console.warn(`${CONFIG.LOG_PREFIX} ${searchUrl} 返回空列表，尝试下一个格式`);
+      }
+    } catch (error) {
+      lastError = error;
+      console.warn(`${CONFIG.LOG_PREFIX} 格式失败: ${searchUrl}`, error.message);
+    }
+  }
+
+  throw new Error(`搜索失败: ${lastError?.message || '无法获取搜索结果'}`);
+}
+
+/**
+ * 加载视频详情，提取播放地址
+ * @param {string} link 视频详情页 URL
+ * @returns {Promise<Object>} 视频源对象
+ */
+async function loadDetail(link) {
+  const fullLink = normalizeUrl(link);
+  const html = await httpGet(fullLink, fullLink);
+  const $ = Widget.html.load(html);
+
+  const videoUrl = extractVideoUrl($);
+  if (!videoUrl) throw new Error("无法找到视频源");
+
+  return {
+    id: fullLink,
+    type: "url",
+    videoUrl: videoUrl,
+    customHeaders: {
+      Referer: fullLink,
+      "User-Agent": CONFIG.USER_AGENT,
+    },
+  };
 }
