@@ -5,7 +5,7 @@ var WidgetMetadata = {
   description: "获取 JAVDay 推荐",
   author: "flyme",
   site: "https://javday.app",
-  version: "1.5.0",
+  version: "1.1.3",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
