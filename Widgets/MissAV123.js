@@ -310,28 +310,43 @@ function parseVideoList($, context = "") {
  * 从详情页提取视频播放地址
  */
 function extractVideoUrl($) {
-  // 尝试 video 标签
+  // 1. 常见 video 标签
   let videoUrl = $("video#J_prismPlayer").attr("src") ||
                  $("video source[src*='.m3u8']").attr("src") ||
                  $("video source").attr("src");
   if (videoUrl) return videoUrl;
 
-  // 尝试 iframe
+  // 2. iframe 播放器
   const iframeSrc = $("iframe[src*='player']").attr("src") ||
                     $("iframe[src*='embed']").attr("src");
   if (iframeSrc) return normalizeUrl(iframeSrc);
 
-  // 尝试 script 中的配置 (常见 DPlayer / Hls)
+  // 3. 提取所有 script 内容
   const scripts = $("script").map((i, el) => $(el).html()).get();
   for (const script of scripts) {
     if (!script) continue;
-    // 匹配 url: 'https://...' 或 "https://..."
-    const match = script.match(/['"](https?:\/\/[^'"]+\.(m3u8|mp4)[^'"]*)['"]/);
-    if (match) return match[1];
-    // 匹配 DPlayer 结构
-    const dplayerMatch = script.match(/video\s*:\s*{\s*[^}]*url\s*:\s*['"]([^'"]+)['"]/);
-    if (dplayerMatch) return dplayerMatch[1];
+
+    // 匹配 window.__NUXT__ 或类似全局变量中的视频地址
+    const nuxtMatch = script.match(/videoUrl["']?\s*:\s*["']([^"']+\.(m3u8|mp4)[^"']*)["']/);
+    if (nuxtMatch) return nuxtMatch[1];
+
+    // 匹配 DPlayer / ArtPlayer 配置
+    const playerMatch = script.match(/url:\s*['"]([^'"]+\.(m3u8|mp4)[^'"]*)['"]/);
+    if (playerMatch) return playerMatch[1];
+
+    // 匹配 hls.js 配置
+    const hlsMatch = script.match(/src:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/);
+    if (hlsMatch) return hlsMatch[1];
+
+    // 通用正则：http(s)://... 以 m3u8 或 mp4 结尾
+    const generalMatch = script.match(/https?:\/\/[^'"\s]+\.(m3u8|mp4)[^'"\s]*/);
+    if (generalMatch) return generalMatch[0];
   }
+
+  // 4. 检查元素属性（如 data-video 等）
+  const dataAttr = $("[data-video]").attr("data-video") ||
+                   $("[data-url]").attr("data-url");
+  if (dataAttr) return dataAttr;
 
   return null;
 }
