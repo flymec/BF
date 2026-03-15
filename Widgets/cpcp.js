@@ -5,7 +5,7 @@ var WidgetMetadata = {
   description: "JAVDay完善版",
   author: "flyme",
   site: "https://javday.app",
-  version: "1.3.2", // 版本号提升
+  version: "1.3.3",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -234,25 +234,24 @@ var WidgetMetadata = {
 // == Constants ================================================================
 const CONFIG = {
   BASE_URL: "https://javday.app",
-  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36",
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   LOG_PREFIX: "ForwardWidget: JAVDay -",
-  TIMEOUT: 10000,
+  TIMEOUT: 15000,
 };
 
 // == Utility Functions ========================================================
 
-/**
- * 发送 HTTP GET 请求（封装错误处理和 headers）
- * @param {string} url 请求地址
- * @param {string} referer Referer 头，默认使用 BASE_URL
- * @returns {Promise<string>} HTML 内容
- */
 async function httpGet(url, referer = CONFIG.BASE_URL) {
   try {
     const response = await Widget.http.get(url, {
       headers: {
         "User-Agent": CONFIG.USER_AGENT,
-        Referer: referer,
+        "Referer": referer,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
       },
       timeout: CONFIG.TIMEOUT,
     });
@@ -267,13 +266,9 @@ async function httpGet(url, referer = CONFIG.BASE_URL) {
   }
 }
 
-/**
- * 将相对 URL 转换为绝对 URL
- * @param {string} url 原始 URL
- * @returns {string} 绝对 URL
- */
 function normalizeUrl(url) {
   if (!url) return "";
+  url = url.trim();
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   if (url.startsWith("//")) return `https:${url}`;
   const base = CONFIG.BASE_URL.replace(/\/+$/, "");
@@ -282,33 +277,108 @@ function normalizeUrl(url) {
 }
 
 /**
- * 从元素的 style 属性中提取背景图片 URL
- * @param {Cheerio} $item 视频项 cheerio 对象
- * @returns {string} 图片 URL
+ * 【修复】多策略提取封面图：
+ *  1. style="background-image:url(...)"
+ *  2. <img> 标签 src / data-src / data-lazy-src / data-original
  */
 function getCoverImgSrc($item) {
-  const styleAttr = $item.find(".videoBox-cover").attr("style");
-  if (!styleAttr) return "";
-  const match = styleAttr.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/);
-  if (!match || !match[1]) return "";
-  return normalizeUrl(match[1]);
+  // 策略1: background-image style
+  const coverEl = $item.find(".videoBox-cover, [class*='cover'], .thumb, .thumbnail").first();
+  const styleAttr = coverEl.attr("style") || $item.attr("style") || "";
+  if (styleAttr) {
+    const match = styleAttr.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/);
+    if (match && match[1]) return normalizeUrl(match[1]);
+  }
+
+  // 策略2: img 标签各种懒加载属性
+  const imgEl = $item.find("img").first();
+  if (imgEl.length) {
+    const src =
+      imgEl.attr("data-src") ||
+      imgEl.attr("data-lazy-src") ||
+      imgEl.attr("data-original") ||
+      imgEl.attr("data-url") ||
+      imgEl.attr("src");
+    if (src && !src.includes("data:image")) return normalizeUrl(src);
+  }
+
+  return "";
 }
 
 /**
- * 解析视频列表页的 DOM，提取视频项
- * @param {Cheerio} $ cheerio 实例
- * @param {string} context 描述信息（用于返回值）
- * @returns {Array} 视频项数组
+ * 【修复】parseVideoList：
+ *  - 扩大选择器范围，兼容多种 DOM 结构
+ *  - 链接从 <a> 父元素或子元素中获取
+ *  - 标题从多个候选元素中获取
  */
 function parseVideoList($, context = "来自 JAVDay") {
   const items = [];
-  $(".video-wrapper .videoBox").each((index, element) => {
-    const $item = $(element);
-    const link = $item.attr("href");
-    const title = $item.find(".videoBox-info .title").text().trim();
-    const imgSrc = getCoverImgSrc($item);
 
-    if (!link || !title) return;
+  // 候选容器选择器，按优先级排列
+  const containerSelectors = [
+    ".video-wrapper .videoBox",
+    ".video-list .videoBox",
+    ".videoBox",
+    ".video-item",
+    "article.post",
+    ".item",
+  ];
+
+  let $elements = $();
+  for (const sel of containerSelectors) {
+    $elements = $(sel);
+    if ($elements.length > 0) {
+      console.log(`${CONFIG.LOG_PREFIX} 使用选择器: ${sel}，找到 ${$elements.length} 个元素`);
+      break;
+    }
+  }
+
+  if ($elements.length === 0) {
+    console.warn(`${CONFIG.LOG_PREFIX} 所有选择器均未匹配，尝试全局 <a> 扫描`);
+    // 最后手段：扫描所有包含视频链接的 <a> 标签
+    $("a[href]").each((index, element) => {
+      const $item = $(element);
+      const link = $item.attr("href");
+      if (!link || !link.match(/\/(video|av|watch|movie|detail)\//i)) return;
+
+      const title =
+        $item.find("[class*='title']").text().trim() ||
+        $item.attr("title") ||
+        $item.text().trim();
+      if (!title || title.length < 2) return;
+
+      const imgSrc = getCoverImgSrc($item);
+      items.push({
+        id: `${index}|${link}`,
+        type: "url",
+        title: title,
+        imgSrc: imgSrc,
+        backdropPath: imgSrc,
+        link: normalizeUrl(link),
+        description: context,
+        mediaType: "movie",
+      });
+    });
+    return items;
+  }
+
+  $elements.each((index, element) => {
+    const $item = $(element);
+
+    // 获取链接：元素本身是 <a>，或其内部第一个 <a>
+    let link = $item.attr("href") || $item.find("a[href]").first().attr("href");
+    if (!link) return;
+
+    // 获取标题：多候选
+    const title =
+      $item.find(".videoBox-info .title").text().trim() ||
+      $item.find(".title").text().trim() ||
+      $item.find("h2, h3, h4").text().trim() ||
+      $item.find("[class*='title']").text().trim() ||
+      $item.attr("title") || "";
+    if (!title) return;
+
+    const imgSrc = getCoverImgSrc($item);
 
     items.push({
       id: `${index}|${link}`,
@@ -321,19 +391,17 @@ function parseVideoList($, context = "来自 JAVDay") {
       mediaType: "movie",
     });
   });
+
+  console.log(`${CONFIG.LOG_PREFIX} parseVideoList 解析到 ${items.length} 条`);
   return items;
 }
 
-/**
- * 从 DPlayer 脚本内容中提取视频 URL
- * @param {string} scriptContent 脚本内容
- * @returns {string|null} 视频 URL
- */
 function extractVideoUrlFromDPlayerScript(scriptContent) {
   if (!scriptContent) return null;
   const regexes = [
-    /video\s*:\s*{\s*[^}]*url\s*:\s*['"]([^'"]+)['"]/,
+    /video\s*:\s*\{[^}]*?url\s*:\s*['"]([^'"]+)['"]/s,
     /url\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/,
+    /['"]url['"]\s*:\s*['"]([^'"]+)['"]/,
   ];
   for (const regex of regexes) {
     const match = scriptContent.match(regex);
@@ -342,115 +410,112 @@ function extractVideoUrlFromDPlayerScript(scriptContent) {
   return null;
 }
 
-/**
- * 从详情页 DOM 中提取视频源（综合多种方式）
- * @param {Cheerio} $ cheerio 实例
- * @returns {string|null} 视频 URL（已转换为绝对地址）
- */
 function extractVideoUrl($) {
   let videoUrl = null;
 
-  // 1. 查找 DPlayer 脚本
-  const dplayerScript = Array.from($("script")).find(el => {
-    const content = $(el).html();
-    return content && content.includes("new DPlayer");
-  });
+  // 1. DPlayer 脚本
+  const scripts = Array.from($("script")).map(el => $(el).html() || "");
+  const dplayerScript = scripts.find(c => c.includes("new DPlayer") || c.includes("DPlayer("));
   if (dplayerScript) {
-    videoUrl = extractVideoUrlFromDPlayerScript($(dplayerScript).html());
+    videoUrl = extractVideoUrlFromDPlayerScript(dplayerScript);
     if (videoUrl) return normalizeUrl(videoUrl);
   }
 
-  // 2. 常见 video 标签
-  videoUrl = $("video#J_prismPlayer").attr("src") ||
-             $("source[src*='.m3u8']").attr("src") ||
-             $("video source").attr("src");
+  // 2. video / source 标签
+  videoUrl =
+    $("video").attr("src") ||
+    $("video#J_prismPlayer").attr("src") ||
+    $("source[src]").first().attr("src") ||
+    $("source[data-src]").first().attr("data-src");
   if (videoUrl) return normalizeUrl(videoUrl);
 
-  // 3. 脚本中内联的 m3u8 地址
-  const scriptContents = Array.from($("script")).map(el => $(el).html());
-  for (const content of scriptContents) {
-    if (content && content.includes(".m3u8")) {
+  // 3. 脚本中的 m3u8
+  for (const content of scripts) {
+    if (content.includes(".m3u8")) {
       const match = content.match(/['"](https?:\/\/[^'"]+\.m3u8[^'"]*)['"]/);
       if (match && match[1]) return normalizeUrl(match[1]);
     }
   }
 
-  // 4. iframe 嵌入
-  const iframeSrc = $("iframe[src*='player']").attr("src");
+  // 4. 脚本中的 mp4
+  for (const content of scripts) {
+    if (content.includes(".mp4")) {
+      const match = content.match(/['"](https?:\/\/[^'"]+\.mp4[^'"]*)['"]/);
+      if (match && match[1]) return normalizeUrl(match[1]);
+    }
+  }
+
+  // 5. iframe 播放器
+  const iframeSrc =
+    $("iframe[src*='player']").attr("src") ||
+    $("iframe[src*='embed']").attr("src") ||
+    $("iframe[src]").first().attr("src");
   if (iframeSrc) return normalizeUrl(iframeSrc);
 
   return null;
 }
 
 /**
- * 从 URL 中提取分类/标签 ID（用于构建人气排序路径）
- * @param {string} url 基础 URL
- * @returns {string} ID
- */
-function extractCategoryId(url) {
-  const parts = url.split("/").filter(p => p && p !== "index.php");
-  return parts.pop() || "unknown";
-}
-
-/**
- * 构建分页 URL（支持排序）
- * @param {string} baseUrl 基础 URL（如分类页、标签页）
- * @param {string} sortBy 排序方式 new / popular
- * @param {number} page 页码
- * @returns {string} 完整分页 URL
+ * 【修复】buildPageUrl：
+ *  - 正确处理 index.php 路径
+ *  - 正确处理 label / category / fiter 路径
+ *  - 返回完整 URL 而非仅路径
  */
 function buildPageUrl(baseUrl, sortBy, page) {
-  const cleanBase = baseUrl.replace(/\/+$/, "").replace(/\/page\/\d+$/, "");
-  const id = extractCategoryId(cleanBase);
-  const isLabel = cleanBase.includes("/label/");
+  // 去掉末尾斜杠和已有分页
+  let cleanBase = baseUrl.replace(/\/+$/, "").replace(/\/page\/\d+$/, "");
+
+  const hasIndexPhp = cleanBase.includes("index.php");
+  const isLabel = /\/label\//.test(cleanBase);
+
+  // 提取最后一段作为 slug
+  // 例: https://javday.app/category/censored  -> censored
+  // 例: https://javday.app/index.php/category/madou -> madou
+  const slugMatch = cleanBase.match(/\/([^/]+)\/?$/);
+  const slug = slugMatch ? slugMatch[1] : "";
 
   let path;
   if (sortBy === "popular") {
-    path = `/fiter/by/hits/id/${id}/`;
+    // 人气排序路径: /fiter/by/hits/id/{slug}/
+    path = `/fiter/by/hits/id/${slug}/`;
+  } else if (isLabel) {
+    path = `/label/${slug}/`;
   } else {
-    path = isLabel ? `/label/${id}/` : `/category/${id}/`;
+    // 判断是否含 index.php
+    if (hasIndexPhp) {
+      // 保留原有 category/xxx 结构，只替换 base
+      const categoryMatch = cleanBase.match(/\/(category|label)\/([^/]+)/);
+      if (categoryMatch) {
+        path = `/index.php/${categoryMatch[1]}/${categoryMatch[2]}/`;
+      } else {
+        path = `/index.php/category/${slug}/`;
+      }
+    } else {
+      const categoryMatch = cleanBase.match(/\/(category|label)\/([^/]+)/);
+      if (categoryMatch) {
+        path = `/${categoryMatch[1]}/${categoryMatch[2]}/`;
+      } else {
+        path = `/category/${slug}/`;
+      }
+    }
   }
 
-  if (cleanBase.includes("index.php")) {
-    path = `/index.php${path}`;
-  }
-
+  // 拼接分页
   if (page > 1) {
     path += `page/${page}/`;
   }
 
-  return path;
-}
-
-/**
- * 将路径转换为完整 URL
- * @param {string} path 路径
- * @returns {string} 完整 URL
- */
-function getFullUrl(path) {
-  if (path.startsWith("http")) return path;
-  return `${CONFIG.BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  return `${CONFIG.BASE_URL}${path}`;
 }
 
 // == Core Functions ===========================================================
 
-/**
- * 加载通用列表页（分类/标签/厂商）
- * @param {Object} params 参数 { url, sort_by, page }
- * @returns {Promise<Array>} 视频项数组
- */
 async function loadPage(params = {}) {
   const { url, sort_by = "new", page = 1 } = params;
   if (!url) throw new Error("缺少 URL 参数");
 
-  let targetUrl;
-  if (sort_by === "popular") {
-    const popularPath = buildPageUrl(url, "popular", page);
-    targetUrl = getFullUrl(popularPath);
-  } else {
-    const normalPath = buildPageUrl(url, "new", page);
-    targetUrl = getFullUrl(normalPath);
-  }
+  const targetUrl = buildPageUrl(url, sort_by, Number(page));
+  console.log(`${CONFIG.LOG_PREFIX} loadPage => ${targetUrl}`);
 
   try {
     const html = await httpGet(targetUrl, url);
@@ -458,9 +523,9 @@ async function loadPage(params = {}) {
     const items = parseVideoList($, `排序:${sort_by === "new" ? "最新" : "人气"}`);
 
     if (items.length === 0 && sort_by === "popular") {
-      console.warn(`${CONFIG.LOG_PREFIX} 人气路径无数据，降级到普通路径`);
-      const fallbackPath = buildPageUrl(url, "new", page);
-      const fallbackHtml = await httpGet(getFullUrl(fallbackPath), url);
+      console.warn(`${CONFIG.LOG_PREFIX} 人气路径无数据，降级到最新`);
+      const fallbackUrl = buildPageUrl(url, "new", Number(page));
+      const fallbackHtml = await httpGet(fallbackUrl, url);
       const $fallback = Widget.html.load(fallbackHtml);
       return parseVideoList($fallback, "排序:最新(人气降级)");
     }
@@ -468,9 +533,9 @@ async function loadPage(params = {}) {
     return items;
   } catch (error) {
     if (sort_by === "popular") {
-      console.warn(`${CONFIG.LOG_PREFIX} 人气路径请求失败，尝试降级`, error.message);
-      const fallbackPath = buildPageUrl(url, "new", page);
-      const fallbackHtml = await httpGet(getFullUrl(fallbackPath), url);
+      console.warn(`${CONFIG.LOG_PREFIX} 人气路径失败，降级到最新`, error.message);
+      const fallbackUrl = buildPageUrl(url, "new", Number(page));
+      const fallbackHtml = await httpGet(fallbackUrl, url);
       const $fallback = Widget.html.load(fallbackHtml);
       return parseVideoList($fallback, "排序:最新(人气降级)");
     }
@@ -478,44 +543,35 @@ async function loadPage(params = {}) {
   }
 }
 
-/**
- * 搜索视频
- * @param {Object} params 参数 { keyword, page }
- * @returns {Promise<Array>} 视频项数组
- */
 async function search(params = {}) {
   const { keyword, page = 1 } = params;
   if (!keyword) throw new Error("请输入搜索关键词");
 
-  const encodedKeyword = encodeURIComponent(keyword);
-  let searchUrl;
-  if (page === 1) {
-    searchUrl = `${CONFIG.BASE_URL}/search/wd/${encodedKeyword}/`;
-  } else {
-    searchUrl = `${CONFIG.BASE_URL}/search/wd/${encodedKeyword}/page/${page}/`;
-  }
+  const encodedKeyword = encodeURIComponent(keyword.trim());
+  const pageNum = Number(page);
+  const searchUrl = pageNum > 1
+    ? `${CONFIG.BASE_URL}/search/wd/${encodedKeyword}/page/${pageNum}/`
+    : `${CONFIG.BASE_URL}/search/wd/${encodedKeyword}/`;
 
-  const html = await httpGet(searchUrl);
+  console.log(`${CONFIG.LOG_PREFIX} search => ${searchUrl}`);
+  const html = await httpGet(searchUrl, CONFIG.BASE_URL);
   const $ = Widget.html.load(html);
-  const items = parseVideoList($, `搜索: ${keyword}`);
-  return items;
+  return parseVideoList($, `搜索: ${keyword}`);
 }
 
-/**
- * 加载视频详情，提取播放地址
- * @param {string} link 视频详情页 URL
- * @returns {Promise<Object>} 视频源对象
- */
 async function loadDetail(link) {
   const fullLink = normalizeUrl(link);
-  const html = await httpGet(fullLink, fullLink);
+  console.log(`${CONFIG.LOG_PREFIX} loadDetail => ${fullLink}`);
+  const html = await httpGet(fullLink, CONFIG.BASE_URL);
   const $ = Widget.html.load(html);
 
   const videoUrl = extractVideoUrl($);
   if (!videoUrl) throw new Error("无法找到视频源");
 
-  // 提取标题
-  const title = $('h1').first().text().trim() || $('.article-title').text().trim() || '';
+  const title =
+    $("h1").first().text().trim() ||
+    $(".article-title, .entry-title, .post-title").first().text().trim() ||
+    $("title").text().trim() || "";
 
   return {
     title: title,
