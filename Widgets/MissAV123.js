@@ -4,7 +4,7 @@ WidgetMetadata = {
   description: "免费观看日本AV，JAV在线高清",
   author: "nibiru",
   site: "https://github.com/quantumultxx/FW-Widgets",
-  version: "1.0.0",
+  version: "1.0.1",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
