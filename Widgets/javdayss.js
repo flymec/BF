@@ -506,12 +506,12 @@ async function search(params = {}) {
   }
 
   const encodedKeyword = encodeURIComponent(keyword);
-let searchUrl;
-if (page === 1) {
-    searchUrl = `https://javday.app/search/?wd=${encodedKeyword}`;
-} else {
-    searchUrl = `https://javday.app/search/page/${page}/wd/${encodedKeyword}/`;
-}
+  let searchUrl;
+  if (page === 1) {
+    searchUrl = `https://javday.app/?s=${encodedKeyword}`;
+  } else {
+    searchUrl = `https://javday.app/page/${page}/?s=${encodedKeyword}`;
+  }
 
   try {
     const response = await Widget.http.get(searchUrl, {
