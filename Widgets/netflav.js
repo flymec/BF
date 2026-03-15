@@ -1,9 +1,9 @@
 WidgetMetadata = {
   id: "netflav",
   title: "Netflav",
-  description: "获取 Netflav 视频元数据，支持搜索和分类浏览",
+  description: "获取 Netflav 视频元数据，支持搜索和分类浏览（无播放源，仅元数据）",
   author: "nibiru",
-  site: "https://github.com/",
+  site: "https://github.com/quantumultxx/FW-Widgets",
   version: "1.0.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
@@ -108,7 +108,7 @@ WidgetMetadata = {
         { name: "from", title: "页码", type: "page", description: "页码", value: "1" },
       ],
     },
-    // 热门影片（如果存在）
+    // 热门影片
     {
       title: "热门",
       description: "热门影片",
@@ -150,7 +150,7 @@ WidgetMetadata = {
 /**
  * 搜索函数
  * @param {Object} params 包含 keyword, type, from 等参数
- * @returns {Promise<Array>} 视频列表
+ * @returns {Promise<Array>} 视频列表（每个项类型为 url）
  */
 async function search(params = {}) {
   const keyword = encodeURIComponent(params.keyword || "");
@@ -184,7 +184,7 @@ async function loadPageSections(params = {}) {
       throw new Error("地址不能为空");
     }
     // 添加分页参数（如果提供了 from）
-    if (params.from) {
+    if (params.from && params.from > 1) {
       const separator = url.includes('?') ? '&' : '?';
       url += `${separator}page=${params.from}`;
     }
@@ -234,10 +234,10 @@ function parseHtml(htmlContent) {
     const coverElement = $itemElement.find(coverSelector).first();
     const cover = coverElement.attr("data-src") || coverElement.attr("src") || "";
 
-    // 构建视频项，type 为 "url" 表示直接打开链接
+    // 构建视频项，type 为 "url" 表示直接打开链接（无视频源）
     const item = {
       id: relativeLink,
-      type: "url",
+      type: "url", // 点击后用浏览器打开
       title: title,
       backdropPath: cover,
       link: fullLink,
@@ -255,7 +255,7 @@ function parseHtml(htmlContent) {
 }
 
 /**
- * 加载详情页（目前仅返回推荐视频列表，因为 Netflav 不直接提供视频流）
+ * 加载详情页，返回推荐视频列表（无视频源）
  * @param {string} link 详情页 URL
  * @returns {Promise<Object>} 详情对象，包含推荐视频
  */
@@ -273,10 +273,10 @@ async function loadDetail(link) {
   // 返回一个详情对象，无视频源，但可包含推荐列表
   const detailItem = {
     id: link,
-    type: "detail",
+    type: "detail", // 仅用于展示推荐，不提供播放
     mediaType: "movie",
-    title: "详情页", // 可选，实际可从页面解析
-    childItems: recommendations,
+    title: "详情页", // 可选，实际可从页面解析标题
+    childItems: recommendations, // 推荐视频列表
   };
   return detailItem;
 }
