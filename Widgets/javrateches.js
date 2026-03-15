@@ -4,7 +4,7 @@ var WidgetMetadata = {
   description: "获取 JAVRate 推荐",
   author: "Ti",
   site: "https://www.javrate.com/",
-  version: "2.5.0",
+  version: "2.5.1",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -595,6 +595,7 @@ async function loadDetail(linkValue) {
   });
 
   // ── 步骤 3：返回 type: "url"，直接播放 m3u8 ──────────────────────────────
+  // CDN (videocdn.avking.xyz) 校验的 Referer 是 https://www.javrate.com/
   return {
     id: fullLink,
     type: "url",
@@ -606,7 +607,8 @@ async function loadDetail(linkValue) {
     backdropPath: imgSrc,
     link: fullLink,
     customHeaders: {
-      "Referer": playerUrl,
+      "Referer": "https://www.javrate.com/",
+      "Origin": "https://www.javrate.com",
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     },
     relatedItems: relatedItems,
