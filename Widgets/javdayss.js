@@ -506,83 +506,163 @@ async function search(params = {}) {
   }
 
   const encodedKeyword = encodeURIComponent(keyword);
-  
-  // 使用与热门搜索一致的路径格式（网站更可能接受）
-  const searchUrl = page === 1
-    ? `https://javday.app/search/wd/${encodedKeyword}/`
-    : `https://javday.app/search/wd/${encodedKeyword}/page/${page}/`;
 
+  // 第一步：访问首页获取可能的Cookie（如果Widget自动管理Cookie可省略，但为保险保留）
+  let cookies = '';
   try {
-    const response = await Widget.http.get(searchUrl, {
+    const homeResp = await Widget.http.get("https://javday.app/", {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Referer": "https://javday.app/",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",  // 注意：如果 Widget 不支持自动解压，可能需去掉
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "same-origin",
-        "Sec-Fetch-User": "?1",
-        "Cache-Control": "max-age=0",
+        "User-Agent": JAVDAY_USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+      },
+      followRedirects: true,
+    });
+    // 如果响应头中包含set-cookie，Widget可能自动保存，此处仅记录
+    if (homeResp.headers && homeResp.headers['set-cookie']) {
+      // 某些环境可能需要手动提取cookies
+      console.log(`${JAVDAY_LOG_PREFIX} 获取到首页Cookie`);
+    }
+  } catch (e) {
+    console.warn(`${JAVDAY_LOG_PREFIX} 访问首页获取Cookie失败，继续尝试搜索`);
+  }
+
+  // 准备搜索URL列表（优先路径格式，备选查询格式）
+  const urlFormats = [
+    page === 1
+      ? `https://javday.app/search/wd/${encodedKeyword}/`
+      : `https://javday.app/search/wd/${encodedKeyword}/page/${page}/`,
+    page === 1
+      ? `https://javday.app/search/?wd=${encodedKeyword}`
+      : `https://javday.app/search/?wd=${encodedKeyword}&page=${page}`
+  ];
+
+  // 请求头（模拟最新Chrome）
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://javday.app/",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br", // 如果Widget不支持解压，请移除或改为 identity
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-User": "?1",
+    "Cache-Control": "max-age=0",
+    // 如果已经有固定Cookie，可手动添加，例如：
+    // "Cookie": "__cfduid=xxxx; _ga=xxxx;"
+  };
+
+  let lastError = null;
+
+  // 尝试GET请求
+  for (const searchUrl of urlFormats) {
+    try {
+      const response = await Widget.http.get(searchUrl, {
+        headers: headers,
+        followRedirects: true,
+        timeout: 15000,
+      });
+
+      if (!response || response.status !== 200) {
+        lastError = new Error(`HTTP ${response?.status}`);
+        // 打印部分响应内容便于调试
+        if (response?.data) {
+          console.error(`${JAVDAY_LOG_PREFIX} 响应片段: ${response.data.substring(0, 300)}`);
+        }
+        continue;
+      }
+
+      if (!response.data) {
+        lastError = new Error("空响应");
+        continue;
+      }
+
+      const $ = Widget.html.load(response.data);
+      const videoItems = [];
+
+      $(".videoBox").each((index, element) => {
+        const $item = $(element);
+        let link = $item.attr("href");
+        const title = $item.find(".videoBox-info .title").text().trim();
+        const imgSrc = getCoverImgSrc($item);
+
+        if (!link || !title) return;
+
+        if (!link.startsWith("http")) {
+          link = link.startsWith("//")
+            ? `https:${link}`
+            : `https://javday.app${link.startsWith("/") ? "" : "/"}${link}`;
+        }
+        link = link.replace(/([^:]\/)\/+/g, '$1');
+
+        videoItems.push({
+          id: `${index}|${link}`,
+          type: "url",
+          title: title,
+          imgSrc: imgSrc,
+          backdropPath: imgSrc,
+          link: link,
+          description: `搜索: ${keyword}`,
+          mediaType: "movie",
+        });
+      });
+
+      return videoItems;
+
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  // 如果GET全部失败，尝试POST方式（模拟表单提交）
+  try {
+    const postUrl = "https://javday.app/search/";
+    const formData = `wd=${encodedKeyword}`; // 如果分页，可能需要其他参数，此处简化
+    const postResponse = await Widget.http.post(postUrl, formData, {
+      headers: {
+        ...headers,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Origin": "https://javday.app",
       },
       followRedirects: true,
       timeout: 15000,
     });
 
-    if (!response || response.status !== 200) {
-      // 输出更多调试信息
-      console.error(`${JAVDAY_LOG_PREFIX} 搜索失败: HTTP ${response?.status}`);
-      if (response?.data) {
-        console.error(`${JAVDAY_LOG_PREFIX} 响应内容片段: ${response.data.substring(0, 200)}`);
-      }
-      throw new Error(`无法获取搜索页面 (HTTP ${response?.status})`);
-    }
-
-    if (!response.data) {
-      throw new Error("搜索页面内容为空");
-    }
-
-    const $ = Widget.html.load(response.data);
-    const videoItems = [];
-
-    // 使用 .videoBox 选择器（与首页一致）
-    $(".videoBox").each((index, element) => {
-      const $item = $(element);
-      let link = $item.attr("href");
-      const title = $item.find(".videoBox-info .title").text().trim();
-      const imgSrc = getCoverImgSrc($item);
-
-      if (!link || !title) return;
-
-      // 补全链接
-      if (!link.startsWith("http")) {
-        link = link.startsWith("//")
-          ? `https:${link}`
-          : `https://javday.app${link.startsWith("/") ? "" : "/"}${link}`;
-      }
-      link = link.replace(/([^:]\/)\/+/g, '$1');
-
-      videoItems.push({
-        id: `${index}|${link}`,
-        type: "url",
-        title: title,
-        imgSrc: imgSrc,
-        backdropPath: imgSrc,
-        link: link,
-        description: `搜索: ${keyword}`,
-        mediaType: "movie",
+    if (postResponse && postResponse.status === 200 && postResponse.data) {
+      const $ = Widget.html.load(postResponse.data);
+      const videoItems = [];
+      $(".videoBox").each((index, element) => {
+        // 同上解析逻辑
+        const $item = $(element);
+        let link = $item.attr("href");
+        const title = $item.find(".videoBox-info .title").text().trim();
+        const imgSrc = getCoverImgSrc($item);
+        if (!link || !title) return;
+        if (!link.startsWith("http")) {
+          link = link.startsWith("//") ? `https:${link}` : `https://javday.app${link.startsWith("/") ? "" : "/"}${link}`;
+        }
+        link = link.replace(/([^:]\/)\/+/g, '$1');
+        videoItems.push({
+          id: `${index}|${link}`,
+          type: "url",
+          title: title,
+          imgSrc: imgSrc,
+          backdropPath: imgSrc,
+          link: link,
+          description: `搜索: ${keyword}`,
+          mediaType: "movie",
+        });
       });
-    });
-
-    return videoItems;
-
-  } catch (error) {
-    console.error(`${JAVDAY_LOG_PREFIX} 搜索异常: ${error.message}`);
-    throw new Error(`搜索视频失败: ${error.message}`);
+      return videoItems;
+    }
+  } catch (postError) {
+    lastError = postError;
   }
+
+  console.error(`${JAVDAY_LOG_PREFIX} 所有尝试均失败: ${lastError?.message}`);
+  throw new Error(`搜索视频失败: 请检查网络或联系管理员 (最后错误: ${lastError?.message})`);
 }
 
 async function loadDetail(link) {
