@@ -394,18 +394,70 @@ async function loadAll(params = {}) {
   throw new Error("loadAll 需要子类化，请使用具体分类函数");
 }
 
-// 具体分类函数
-async function loadCensored(params) {
-  return _loadAll("censored", params.sort_by, params.page);
+// 有码视频
+async function loadCensored(params = {}) {
+  const { sort_by = "release_date", page = 1 } = params;
+  const url = new URL("/cn/censored", CONFIG.BASE_URL);
+  url.searchParams.set("sort", sort_by);
+  if (page > 1) url.searchParams.set("page", page);
+  const html = await httpGet(url.toString());
+  const $ = Widget.html.load(html);
+  return parseVideoList($, "有码视频");
 }
-async function loadUncensored(params) {
-  return _loadAll("uncensored", params.sort_by, params.page);
+
+// 无码视频
+async function loadUncensored(params = {}) {
+  const { sort_by = "release_date", page = 1 } = params;
+  const url = new URL("/cn/uncensored", CONFIG.BASE_URL);
+  url.searchParams.set("sort", sort_by);
+  if (page > 1) url.searchParams.set("page", page);
+  const html = await httpGet(url.toString());
+  const $ = Widget.html.load(html);
+  return parseVideoList($, "无码视频");
 }
-async function loadUncensoredLeaked(params) {
-  return _loadAll("uncensored-leaked", params.sort_by, params.page);
+
+// 无码泄露
+async function loadUncensoredLeaked(params = {}) {
+  const { sort_by = "release_date", page = 1 } = params;
+  const url = new URL("/cn/uncensored-leaked", CONFIG.BASE_URL);
+  url.searchParams.set("sort", sort_by);
+  if (page > 1) url.searchParams.set("page", page);
+  const html = await httpGet(url.toString());
+  const $ = Widget.html.load(html);
+  return parseVideoList($, "无码泄露");
 }
-async function loadVr(params) {
-  return _loadAll("vr", params.sort_by, params.page);
+
+// VR视频
+async function loadVr(params = {}) {
+  const { sort_by = "release_date", page = 1 } = params;
+  const url = new URL("/cn/vr", CONFIG.BASE_URL);
+  url.searchParams.set("sort", sort_by);
+  if (page > 1) url.searchParams.set("page", page);
+  const html = await httpGet(url.toString());
+  const $ = Widget.html.load(html);
+  return parseVideoList($, "VR视频");
+}
+
+// 业余系列
+async function loadSeries(params = {}) {
+  const { series, page = 1 } = params;
+  if (!series) throw new Error("请选择系列");
+  let url = `${CONFIG.BASE_URL}/cn/tags/${series}`;
+  if (page > 1) url += `?page=${page}`;
+  const html = await httpGet(url);
+  const $ = Widget.html.load(html);
+  return parseVideoList($, `系列: ${series}`);
+}
+
+// 无码厂商
+async function loadMaker(params = {}) {
+  const { maker, page = 1 } = params;
+  if (!maker) throw new Error("请选择厂商");
+  let url = `${CONFIG.BASE_URL}/cn/makers/${maker}`;
+  if (page > 1) url += `?page=${page}`;
+  const html = await httpGet(url);
+  const $ = Widget.html.load(html);
+  return parseVideoList($, `厂商: ${maker}`);
 }
 
 async function _loadAll(type, sort_by, page = 1) {
