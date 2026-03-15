@@ -1,11 +1,12 @@
 // == Metadata =================================================================
+// 必须用 var，不能用 const/let
 var WidgetMetadata = {
   id: "ti.bemarkt.javday",
   title: "JAVDay完善版",
   description: "JAVDay完善版",
   author: "flyme",
   site: "https://javday.app",
-  version: "1.3.3",
+  version: "2.0.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -14,7 +15,7 @@ var WidgetMetadata = {
       title: "搜索视频",
       description: "搜索JAVDay视频库",
       type: "media_list",
-      functionName: "search",
+      functionName: "search",        // 必须与全局 async function 名一致
       cacheDuration: 3600,
       params: [
         {
@@ -24,13 +25,12 @@ var WidgetMetadata = {
           value: "",
           description: "女優/番號/關鍵字搜索…",
         },
-        { name: "page", title: "页码", type: "page", description: "搜索结果页码" }
+        { name: "page", title: "页码", type: "page" }
       ]
     },
     {
       id: "latest_updates",
       title: "最新更新",
-      description: "浏览最新更新视频",
       type: "media_list",
       functionName: "loadPage",
       cacheDuration: 3600,
@@ -42,7 +42,6 @@ var WidgetMetadata = {
     {
       id: "popular_series",
       title: "人气系列",
-      description: "浏览人气系列视频",
       type: "media_list",
       functionName: "loadPage",
       cacheDuration: 3600,
@@ -54,7 +53,6 @@ var WidgetMetadata = {
     {
       id: "new_release",
       title: "新作上市",
-      description: "浏览新作上市视频",
       type: "media_list",
       functionName: "loadPage",
       cacheDuration: 3600,
@@ -74,7 +72,6 @@ var WidgetMetadata = {
     {
       id: "censored",
       title: "有码视频",
-      description: "浏览有码分类视频",
       type: "media_list",
       functionName: "loadPage",
       cacheDuration: 3600,
@@ -94,7 +91,6 @@ var WidgetMetadata = {
     {
       id: "uncensored",
       title: "无码视频",
-      description: "浏览无码分类视频",
       type: "media_list",
       functionName: "loadPage",
       cacheDuration: 3600,
@@ -114,7 +110,6 @@ var WidgetMetadata = {
     {
       id: "uncensored_leaked",
       title: "无码流出",
-      description: "浏览无码流出视频",
       type: "media_list",
       functionName: "loadPage",
       cacheDuration: 3600,
@@ -134,7 +129,6 @@ var WidgetMetadata = {
     {
       id: "sex8",
       title: "杏吧视频",
-      description: "浏览杏吧分类视频",
       type: "media_list",
       functionName: "loadPage",
       cacheDuration: 3600,
@@ -154,7 +148,6 @@ var WidgetMetadata = {
     {
       id: "hongkongdoll",
       title: "玩偶姐姐",
-      description: "浏览玩偶姐姐视频",
       type: "media_list",
       functionName: "loadPage",
       cacheDuration: 3600,
@@ -174,7 +167,6 @@ var WidgetMetadata = {
     {
       id: "chinese_av",
       title: "国产 AV",
-      description: "浏览国产 AV视频",
       type: "media_list",
       functionName: "loadPage",
       cacheDuration: 3600,
@@ -194,7 +186,6 @@ var WidgetMetadata = {
     {
       id: "chinese_producers",
       title: "国产厂商",
-      description: "按厂商标签浏览国产厂商视频",
       type: "media_list",
       functionName: "loadPage",
       cacheDuration: 3600,
@@ -202,20 +193,20 @@ var WidgetMetadata = {
         {
           name: "url", title: "厂商选择", type: "enumeration",
           enumOptions: [
-            { title: "麻豆传媒", value: "https://javday.app/index.php/category/madou/" },
-            { title: "果冻传媒", value: "https://javday.app/index.php/category/91zhipianchang/" },
-            { title: "天美传媒", value: "https://javday.app/index.php/category/timi/" },
-            { title: "星空无限", value: "https://javday.app/index.php/category/xingkong/" },
-            { title: "皇家华人", value: "https://javday.app/index.php/category/royalasianstudio/" },
-            { title: "蜜桃影像", value: "https://javday.app/index.php/category/mtgw/" },
-            { title: "精东影业", value: "https://javday.app/index.php/category/jdav/" },
-            { title: "台湾 AV", value: "https://javday.app/index.php/category/twav/" },
-            { title: "JVID", value: "https://javday.app/index.php/category/jvid/" },
-            { title: "萝莉社", value: "https://javday.app/index.php/category/luolisheus/" },
-            { title: "糖心VLOG", value: "https://javday.app/index.php/category/txvlog/" },
+            { title: "麻豆传媒",   value: "https://javday.app/index.php/category/madou/" },
+            { title: "果冻传媒",   value: "https://javday.app/index.php/category/91zhipianchang/" },
+            { title: "天美传媒",   value: "https://javday.app/index.php/category/timi/" },
+            { title: "星空无限",   value: "https://javday.app/index.php/category/xingkong/" },
+            { title: "皇家华人",   value: "https://javday.app/index.php/category/royalasianstudio/" },
+            { title: "蜜桃影像",   value: "https://javday.app/index.php/category/mtgw/" },
+            { title: "精东影业",   value: "https://javday.app/index.php/category/jdav/" },
+            { title: "台湾 AV",    value: "https://javday.app/index.php/category/twav/" },
+            { title: "JVID",       value: "https://javday.app/index.php/category/jvid/" },
+            { title: "萝莉社",     value: "https://javday.app/index.php/category/luolisheus/" },
+            { title: "糖心VLOG",   value: "https://javday.app/index.php/category/txvlog/" },
             { title: "Psychoporn TW", value: "https://javday.app/index.php/category/psychoporn-tw/" }
           ],
-          value: "https://javday.app/index.php/category/madou/",
+          value: "https://javday.app/index.php/category/madou/"
         },
         {
           name: "sort_by", title: "排序方式", type: "enumeration",
@@ -232,353 +223,357 @@ var WidgetMetadata = {
 };
 
 // == Constants ================================================================
-const CONFIG = {
-  BASE_URL: "https://javday.app",
-  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  LOG_PREFIX: "ForwardWidget: JAVDay -",
-  TIMEOUT: 15000,
-};
+var BASE_URL   = "https://javday.app";
+var UA         = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+var LOG        = "JAVDay:";
+var TIMEOUT    = 15000;
 
-// == Utility Functions ========================================================
+// == Helpers ==================================================================
 
-async function httpGet(url, referer = CONFIG.BASE_URL) {
-  try {
-    const response = await Widget.http.get(url, {
-      headers: {
-        "User-Agent": CONFIG.USER_AGENT,
-        "Referer": referer,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-      },
-      timeout: CONFIG.TIMEOUT,
-    });
-    if (response.status && (response.status < 200 || response.status >= 300)) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    if (!response?.data) throw new Error("响应内容为空");
-    return response.data;
-  } catch (error) {
-    console.error(`${CONFIG.LOG_PREFIX} 请求失败: ${url}`, error.message);
-    throw error;
-  }
+/**
+ * 保证返回数组，防止 map/forEach 崩溃（规范要求数据源函数必须返回数组）
+ */
+function ensureArray(val) {
+  if (Array.isArray(val)) return val;
+  return [];
 }
 
+/**
+ * 相对→绝对 URL
+ */
 function normalizeUrl(url) {
   if (!url) return "";
   url = url.trim();
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  if (url.startsWith("//")) return `https:${url}`;
-  const base = CONFIG.BASE_URL.replace(/\/+$/, "");
-  const path = url.startsWith("/") ? url : `/${url}`;
+  if (url.startsWith("//")) return "https:" + url;
+  var base = BASE_URL.replace(/\/+$/, "");
+  var path  = url.startsWith("/") ? url : "/" + url;
   return (base + path).replace(/([^:]\/)\/+/g, "$1");
 }
 
 /**
- * 【修复】多策略提取封面图：
- *  1. style="background-image:url(...)"
- *  2. <img> 标签 src / data-src / data-lazy-src / data-original
+ * HTTP GET，带标准浏览器头
  */
-function getCoverImgSrc($item) {
-  // 策略1: background-image style
-  const coverEl = $item.find(".videoBox-cover, [class*='cover'], .thumb, .thumbnail").first();
-  const styleAttr = coverEl.attr("style") || $item.attr("style") || "";
-  if (styleAttr) {
-    const match = styleAttr.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/);
-    if (match && match[1]) return normalizeUrl(match[1]);
+async function httpGet(url, referer) {
+  referer = referer || BASE_URL;
+  var response = await Widget.http.get(url, {
+    headers: {
+      "User-Agent":      UA,
+      "Referer":         referer,
+      "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    },
+    timeout: TIMEOUT,
+  });
+  if (!response || !response.data) throw new Error(LOG + " 响应为空: " + url);
+  if (response.status && (response.status < 200 || response.status >= 300)) {
+    throw new Error(LOG + " HTTP " + response.status + ": " + url);
   }
+  return response.data;
+}
 
-  // 策略2: img 标签各种懒加载属性
-  const imgEl = $item.find("img").first();
+/**
+ * 从元素中提取封面图（支持 background-image 和各种懒加载 img）
+ */
+function getCover($item) {
+  // 1. background-image style
+  var coverEl  = $item.find(".videoBox-cover, [class*='cover'], .thumb").first();
+  var styleStr = coverEl.attr("style") || $item.attr("style") || "";
+  if (styleStr) {
+    var m = styleStr.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/);
+    if (m && m[1]) return normalizeUrl(m[1]);
+  }
+  // 2. img 懒加载属性
+  var imgEl = $item.find("img").first();
   if (imgEl.length) {
-    const src =
-      imgEl.attr("data-src") ||
-      imgEl.attr("data-lazy-src") ||
-      imgEl.attr("data-original") ||
-      imgEl.attr("data-url") ||
-      imgEl.attr("src");
-    if (src && !src.includes("data:image")) return normalizeUrl(src);
+    var src = imgEl.attr("data-src") ||
+              imgEl.attr("data-lazy-src") ||
+              imgEl.attr("data-original") ||
+              imgEl.attr("data-url") ||
+              imgEl.attr("src") || "";
+    if (src && !src.startsWith("data:")) return normalizeUrl(src);
   }
-
   return "";
 }
 
 /**
- * 【修复】parseVideoList：
- *  - 扩大选择器范围，兼容多种 DOM 结构
- *  - 链接从 <a> 父元素或子元素中获取
- *  - 标题从多个候选元素中获取
+ * 解析列表页 DOM → MediaItem[]
+ * 规范要求：数据源函数必须返回 MediaItem[]
+ * loadDetail 只在条目没有 videoUrl 且有 link 时触发，所以列表只需返回 link
  */
-function parseVideoList($, context = "来自 JAVDay") {
-  const items = [];
+function parseVideoList($, context) {
+  context = context || "JAVDay";
+  var items = [];
 
-  // 候选容器选择器，按优先级排列
-  const containerSelectors = [
+  // 候选选择器，按优先级
+  var selectors = [
     ".video-wrapper .videoBox",
     ".video-list .videoBox",
     ".videoBox",
     ".video-item",
     "article.post",
-    ".item",
   ];
 
-  let $elements = $();
-  for (const sel of containerSelectors) {
-    $elements = $(sel);
-    if ($elements.length > 0) {
-      console.log(`${CONFIG.LOG_PREFIX} 使用选择器: ${sel}，找到 ${$elements.length} 个元素`);
-      break;
-    }
+  var $els = $();
+  for (var i = 0; i < selectors.length; i++) {
+    $els = $(selectors[i]);
+    if ($els.length > 0) break;
   }
 
-  if ($elements.length === 0) {
-    console.warn(`${CONFIG.LOG_PREFIX} 所有选择器均未匹配，尝试全局 <a> 扫描`);
-    // 最后手段：扫描所有包含视频链接的 <a> 标签
-    $("a[href]").each((index, element) => {
-      const $item = $(element);
-      const link = $item.attr("href");
-      if (!link || !link.match(/\/(video|av|watch|movie|detail)\//i)) return;
-
-      const title =
-        $item.find("[class*='title']").text().trim() ||
-        $item.attr("title") ||
-        $item.text().trim();
+  // 兜底：扫描所有 <a> 含视频特征路径
+  if ($els.length === 0) {
+    $("a[href]").each(function(idx, el) {
+      var $a   = $(el);
+      var link = $a.attr("href") || "";
+      if (!link.match(/\/(video|av|watch|movie|detail|p)\//i) && !link.match(/\.html?$/i)) return;
+      var title = $a.find("[class*='title']").text().trim() ||
+                  $a.attr("title") || $a.text().trim();
       if (!title || title.length < 2) return;
-
-      const imgSrc = getCoverImgSrc($item);
+      var imgSrc = getCover($a);
       items.push({
-        id: `${index}|${link}`,
-        type: "url",
-        title: title,
-        imgSrc: imgSrc,
+        id:          idx + "|" + link,
+        type:        "url",               // 规范 type 值
+        title:       title,
+        imgSrc:      imgSrc,
         backdropPath: imgSrc,
-        link: normalizeUrl(link),
+        link:        normalizeUrl(link),  // 有 link 无 videoUrl → 触发 loadDetail
         description: context,
-        mediaType: "movie",
+        mediaType:   "movie",
       });
     });
     return items;
   }
 
-  $elements.each((index, element) => {
-    const $item = $(element);
-
-    // 获取链接：元素本身是 <a>，或其内部第一个 <a>
-    let link = $item.attr("href") || $item.find("a[href]").first().attr("href");
+  $els.each(function(idx, el) {
+    var $item = $(el);
+    var link  = $item.attr("href") || $item.find("a[href]").first().attr("href") || "";
     if (!link) return;
 
-    // 获取标题：多候选
-    const title =
+    var title =
       $item.find(".videoBox-info .title").text().trim() ||
       $item.find(".title").text().trim() ||
-      $item.find("h2, h3, h4").text().trim() ||
+      $item.find("h2, h3, h4").first().text().trim() ||
       $item.find("[class*='title']").text().trim() ||
       $item.attr("title") || "";
     if (!title) return;
 
-    const imgSrc = getCoverImgSrc($item);
+    var imgSrc = getCover($item);
 
     items.push({
-      id: `${index}|${link}`,
-      type: "url",
-      title: title,
-      imgSrc: imgSrc,
+      id:           idx + "|" + link,
+      type:         "url",
+      title:        title,
+      imgSrc:       imgSrc,
       backdropPath: imgSrc,
-      link: normalizeUrl(link),
-      description: context,
-      mediaType: "movie",
+      link:         normalizeUrl(link),   // 无 videoUrl → 触发 loadDetail
+      description:  context,
+      mediaType:    "movie",
     });
   });
 
-  console.log(`${CONFIG.LOG_PREFIX} parseVideoList 解析到 ${items.length} 条`);
   return items;
 }
 
-function extractVideoUrlFromDPlayerScript(scriptContent) {
-  if (!scriptContent) return null;
-  const regexes = [
-    /video\s*:\s*\{[^}]*?url\s*:\s*['"]([^'"]+)['"]/s,
-    /url\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/,
-    /['"]url['"]\s*:\s*['"]([^'"]+)['"]/,
-  ];
-  for (const regex of regexes) {
-    const match = scriptContent.match(regex);
-    if (match && match[1]) return match[1];
+/**
+ * 构建分页 URL（返回完整绝对地址）
+ */
+function buildPageUrl(baseUrl, sortBy, page) {
+  var clean = baseUrl.replace(/\/+$/, "").replace(/\/page\/\d+\/?$/, "");
+
+  var hasIndexPhp = clean.indexOf("index.php") !== -1;
+  var isLabel     = /\/label\//.test(clean);
+
+  // 取最后一段 slug
+  var slugMatch = clean.match(/\/([^/]+)\/?$/);
+  var slug      = slugMatch ? slugMatch[1] : "";
+
+  // 提取 category|label 段（用于 index.php 路径）
+  var catMatch = clean.match(/\/(category|label)\/([^/]+)/);
+
+  var path;
+  if (sortBy === "popular") {
+    // 人气排序固定走 /fiter/by/hits/id/{slug}/
+    path = "/fiter/by/hits/id/" + slug + "/";
+  } else if (isLabel) {
+    path = "/label/" + slug + "/";
+  } else if (hasIndexPhp) {
+    path = catMatch
+      ? "/index.php/" + catMatch[1] + "/" + catMatch[2] + "/"
+      : "/index.php/category/" + slug + "/";
+  } else {
+    path = catMatch
+      ? "/" + catMatch[1] + "/" + catMatch[2] + "/"
+      : "/category/" + slug + "/";
+  }
+
+  if (Number(page) > 1) {
+    path += "page/" + page + "/";
+  }
+
+  return BASE_URL + path;
+}
+
+// == 视频详情提取 =============================================================
+
+function extractFromDPlayer(scripts) {
+  for (var i = 0; i < scripts.length; i++) {
+    var c = scripts[i];
+    if (!c || (c.indexOf("DPlayer") === -1 && c.indexOf("dplayer") === -1)) continue;
+    var patterns = [
+      /video\s*:\s*\{[^}]*?url\s*:\s*['"]([^'"]+)['"]/s,
+      /url\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/,
+      /['"]url['"]\s*:\s*['"]([^'"]+)['"]/,
+    ];
+    for (var j = 0; j < patterns.length; j++) {
+      var m = c.match(patterns[j]);
+      if (m && m[1]) return normalizeUrl(m[1]);
+    }
   }
   return null;
 }
 
 function extractVideoUrl($) {
-  let videoUrl = null;
+  var scripts = [];
+  $("script").each(function(_, el) { scripts.push($(el).html() || ""); });
 
-  // 1. DPlayer 脚本
-  const scripts = Array.from($("script")).map(el => $(el).html() || "");
-  const dplayerScript = scripts.find(c => c.includes("new DPlayer") || c.includes("DPlayer("));
-  if (dplayerScript) {
-    videoUrl = extractVideoUrlFromDPlayerScript(dplayerScript);
-    if (videoUrl) return normalizeUrl(videoUrl);
-  }
+  // 1. DPlayer
+  var url = extractFromDPlayer(scripts);
+  if (url) return url;
 
   // 2. video / source 标签
-  videoUrl =
-    $("video").attr("src") ||
-    $("video#J_prismPlayer").attr("src") ||
-    $("source[src]").first().attr("src") ||
-    $("source[data-src]").first().attr("data-src");
-  if (videoUrl) return normalizeUrl(videoUrl);
+  url = $("video").attr("src") ||
+        $("video#J_prismPlayer").attr("src") ||
+        $("source[src]").first().attr("src") ||
+        $("source[data-src]").first().attr("data-src");
+  if (url) return normalizeUrl(url);
 
-  // 3. 脚本中的 m3u8
-  for (const content of scripts) {
-    if (content.includes(".m3u8")) {
-      const match = content.match(/['"](https?:\/\/[^'"]+\.m3u8[^'"]*)['"]/);
-      if (match && match[1]) return normalizeUrl(match[1]);
+  // 3. 脚本内联 m3u8
+  for (var i = 0; i < scripts.length; i++) {
+    if (scripts[i].indexOf(".m3u8") !== -1) {
+      var m = scripts[i].match(/['"](https?:\/\/[^'"]+\.m3u8[^'"]*)['"]/);
+      if (m && m[1]) return normalizeUrl(m[1]);
     }
   }
 
-  // 4. 脚本中的 mp4
-  for (const content of scripts) {
-    if (content.includes(".mp4")) {
-      const match = content.match(/['"](https?:\/\/[^'"]+\.mp4[^'"]*)['"]/);
-      if (match && match[1]) return normalizeUrl(match[1]);
+  // 4. 脚本内联 mp4
+  for (var i = 0; i < scripts.length; i++) {
+    if (scripts[i].indexOf(".mp4") !== -1) {
+      var m = scripts[i].match(/['"](https?:\/\/[^'"]+\.mp4[^'"]*)['"]/);
+      if (m && m[1]) return normalizeUrl(m[1]);
     }
   }
 
   // 5. iframe 播放器
-  const iframeSrc =
-    $("iframe[src*='player']").attr("src") ||
-    $("iframe[src*='embed']").attr("src") ||
-    $("iframe[src]").first().attr("src");
-  if (iframeSrc) return normalizeUrl(iframeSrc);
+  url = $("iframe[src*='player']").attr("src") ||
+        $("iframe[src*='embed']").attr("src") ||
+        $("iframe[src]").first().attr("src");
+  if (url) return normalizeUrl(url);
 
   return null;
 }
 
+// == 模块函数（名称必须与 functionName 完全一致）=============================
+
 /**
- * 【修复】buildPageUrl：
- *  - 正确处理 index.php 路径
- *  - 正确处理 label / category / fiter 路径
- *  - 返回完整 URL 而非仅路径
+ * 通用列表加载（分类 / 标签 / 厂商）
+ * 规范：必须返回 MediaItem[]
  */
-function buildPageUrl(baseUrl, sortBy, page) {
-  // 去掉末尾斜杠和已有分页
-  let cleanBase = baseUrl.replace(/\/+$/, "").replace(/\/page\/\d+$/, "");
+async function loadPage(params) {
+  params = params || {};
+  var url     = params.url    || "";
+  var sortBy  = params.sort_by || "new";
+  var page    = Number(params.page) || 1;
 
-  const hasIndexPhp = cleanBase.includes("index.php");
-  const isLabel = /\/label\//.test(cleanBase);
+  if (!url) throw new Error("缺少 url 参数");
 
-  // 提取最后一段作为 slug
-  // 例: https://javday.app/category/censored  -> censored
-  // 例: https://javday.app/index.php/category/madou -> madou
-  const slugMatch = cleanBase.match(/\/([^/]+)\/?$/);
-  const slug = slugMatch ? slugMatch[1] : "";
+  var targetUrl = buildPageUrl(url, sortBy, page);
+  console.log(LOG, "loadPage =>", targetUrl);
 
-  let path;
-  if (sortBy === "popular") {
-    // 人气排序路径: /fiter/by/hits/id/{slug}/
-    path = `/fiter/by/hits/id/${slug}/`;
-  } else if (isLabel) {
-    path = `/label/${slug}/`;
-  } else {
-    // 判断是否含 index.php
-    if (hasIndexPhp) {
-      // 保留原有 category/xxx 结构，只替换 base
-      const categoryMatch = cleanBase.match(/\/(category|label)\/([^/]+)/);
-      if (categoryMatch) {
-        path = `/index.php/${categoryMatch[1]}/${categoryMatch[2]}/`;
-      } else {
-        path = `/index.php/category/${slug}/`;
-      }
-    } else {
-      const categoryMatch = cleanBase.match(/\/(category|label)\/([^/]+)/);
-      if (categoryMatch) {
-        path = `/${categoryMatch[1]}/${categoryMatch[2]}/`;
-      } else {
-        path = `/category/${slug}/`;
-      }
-    }
-  }
-
-  // 拼接分页
-  if (page > 1) {
-    path += `page/${page}/`;
-  }
-
-  return `${CONFIG.BASE_URL}${path}`;
-}
-
-// == Core Functions ===========================================================
-
-async function loadPage(params = {}) {
-  const { url, sort_by = "new", page = 1 } = params;
-  if (!url) throw new Error("缺少 URL 参数");
-
-  const targetUrl = buildPageUrl(url, sort_by, Number(page));
-  console.log(`${CONFIG.LOG_PREFIX} loadPage => ${targetUrl}`);
+  var html, $, items;
 
   try {
-    const html = await httpGet(targetUrl, url);
-    const $ = Widget.html.load(html);
-    const items = parseVideoList($, `排序:${sort_by === "new" ? "最新" : "人气"}`);
-
-    if (items.length === 0 && sort_by === "popular") {
-      console.warn(`${CONFIG.LOG_PREFIX} 人气路径无数据，降级到最新`);
-      const fallbackUrl = buildPageUrl(url, "new", Number(page));
-      const fallbackHtml = await httpGet(fallbackUrl, url);
-      const $fallback = Widget.html.load(fallbackHtml);
-      return parseVideoList($fallback, "排序:最新(人气降级)");
+    html  = await httpGet(targetUrl, url);
+    $     = Widget.html.load(html);
+    items = parseVideoList($, sortBy === "new" ? "最新" : "人气");
+  } catch (e) {
+    // popular 路径失败 → 降级到 new
+    if (sortBy === "popular") {
+      console.warn(LOG, "人气路径失败，降级", e.message);
+      var fbUrl  = buildPageUrl(url, "new", page);
+      html  = await httpGet(fbUrl, url);
+      $     = Widget.html.load(html);
+      items = parseVideoList($, "最新(降级)");
+    } else {
+      throw e;
     }
-
-    return items;
-  } catch (error) {
-    if (sort_by === "popular") {
-      console.warn(`${CONFIG.LOG_PREFIX} 人气路径失败，降级到最新`, error.message);
-      const fallbackUrl = buildPageUrl(url, "new", Number(page));
-      const fallbackHtml = await httpGet(fallbackUrl, url);
-      const $fallback = Widget.html.load(fallbackHtml);
-      return parseVideoList($fallback, "排序:最新(人气降级)");
-    }
-    throw error;
   }
+
+  // popular 路径返回空 → 降级
+  if (items.length === 0 && sortBy === "popular") {
+    console.warn(LOG, "人气路径无数据，降级");
+    var fbUrl  = buildPageUrl(url, "new", page);
+    html  = await httpGet(fbUrl, url);
+    $     = Widget.html.load(html);
+    items = parseVideoList($, "最新(降级)");
+  }
+
+  return ensureArray(items); // 规范：必须返回数组
 }
 
-async function search(params = {}) {
-  const { keyword, page = 1 } = params;
+/**
+ * 搜索
+ * 规范：必须返回 MediaItem[]
+ */
+async function search(params) {
+  params = params || {};
+  var keyword = (params.keyword || "").trim();
+  var page    = Number(params.page) || 1;
+
   if (!keyword) throw new Error("请输入搜索关键词");
 
-  const encodedKeyword = encodeURIComponent(keyword.trim());
-  const pageNum = Number(page);
-  const searchUrl = pageNum > 1
-    ? `${CONFIG.BASE_URL}/search/wd/${encodedKeyword}/page/${pageNum}/`
-    : `${CONFIG.BASE_URL}/search/wd/${encodedKeyword}/`;
+  var encoded   = encodeURIComponent(keyword);
+  var searchUrl = page > 1
+    ? BASE_URL + "/search/wd/" + encoded + "/page/" + page + "/"
+    : BASE_URL + "/search/wd/" + encoded + "/";
 
-  console.log(`${CONFIG.LOG_PREFIX} search => ${searchUrl}`);
-  const html = await httpGet(searchUrl, CONFIG.BASE_URL);
-  const $ = Widget.html.load(html);
-  return parseVideoList($, `搜索: ${keyword}`);
+  console.log(LOG, "search =>", searchUrl);
+  var html  = await httpGet(searchUrl, BASE_URL);
+  var $     = Widget.html.load(html);
+  var items = parseVideoList($, "搜索: " + keyword);
+
+  return ensureArray(items); // 规范：必须返回数组
 }
 
+/**
+ * 详情加载
+ * 规范：条目有 link 无 videoUrl 时触发；返回 { title, videoUrl } 或 { title, episodeItems }
+ */
 async function loadDetail(link) {
-  const fullLink = normalizeUrl(link);
-  console.log(`${CONFIG.LOG_PREFIX} loadDetail => ${fullLink}`);
-  const html = await httpGet(fullLink, CONFIG.BASE_URL);
-  const $ = Widget.html.load(html);
+  var fullLink = normalizeUrl(link);
+  console.log(LOG, "loadDetail =>", fullLink);
 
-  const videoUrl = extractVideoUrl($);
-  if (!videoUrl) throw new Error("无法找到视频源");
+  var html = await httpGet(fullLink, BASE_URL);
+  var $    = Widget.html.load(html);
 
-  const title =
+  var videoUrl = extractVideoUrl($);
+
+  var title =
     $("h1").first().text().trim() ||
     $(".article-title, .entry-title, .post-title").first().text().trim() ||
-    $("title").text().trim() || "";
+    $("title").text().replace(/[-_|].*$/, "").trim() || "";
 
+  if (!videoUrl) {
+    throw new Error("无法找到视频源: " + fullLink);
+  }
+
+  // 规范返回格式：{ title, videoUrl }
   return {
-    title: title,
-    videoUrl: videoUrl,
+    title:    title,
+    videoUrl: String(videoUrl),
+    // 自定义请求头（播放时携带）
     customHeaders: {
-      Referer: fullLink,
-      "User-Agent": CONFIG.USER_AGENT,
+      "Referer":    fullLink,
+      "User-Agent": UA,
     },
   };
 }
