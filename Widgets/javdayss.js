@@ -2,7 +2,7 @@
 var WidgetMetadata = {
   id: "ti.bemarkt.javday",
   title: "JAVDay完善版",
-  description: "获取 JAVDay 推荐",
+  description: "JAVDay完善版",
   author: "flyme",
   site: "https://javday.app",
   version: "1.3.1", // 版本号提升
