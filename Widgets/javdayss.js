@@ -500,51 +500,55 @@ async function loadPage(params = {}) {
 async function search(params = {}) {
   const keyword = params.keyword || "";
   const page = parseInt(params.page, 10) || 1;
-
+  
   if (!keyword) {
     throw new Error("请输入搜索关键词");
   }
 
   const encodedKeyword = encodeURIComponent(keyword);
-
-  let searchUrl;
-  if (page === 1) {
-    searchUrl = `https://javday.app/?s=${encodedKeyword}`;
-  } else {
-    searchUrl = `https://javday.app/page/${page}/?s=${encodedKeyword}`;
-  }
+  // 使用与热门搜索一致的路径格式
+  const searchUrl = page === 1
+    ? `https://javday.app/search/wd/${encodedKeyword}/`
+    : `https://javday.app/search/page/${page}/wd/${encodedKeyword}/`;
 
   try {
     const response = await Widget.http.get(searchUrl, {
       headers: {
         "User-Agent": JAVDAY_USER_AGENT,
-        Referer: "https://javday.app/",
+        "Referer": "https://javday.app/",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3"
       },
+      followRedirects: true
     });
 
-    if (!response?.data) {
-      throw new Error("无法获取搜索结果");
+    if (!response || response.status !== 200) {
+      throw new Error(`HTTP ${response?.status || '未知'} - 无法获取搜索页面`);
+    }
+
+    if (!response.data) {
+      throw new Error("搜索页面内容为空");
     }
 
     const $ = Widget.html.load(response.data);
     const videoItems = [];
 
-    $(".video-wrapper .videoBox").each((index, element) => {
+    // 选择所有视频条目容器（与首页结构一致）
+    $(".videoBox").each((index, element) => {
       const $item = $(element);
-
       let link = $item.attr("href");
       const title = $item.find(".videoBox-info .title").text().trim();
-      const imgSrc = getCoverImgSrc($item);
+      const imgSrc = getCoverImgSrc($item); // 复用图片提取函数
 
       if (!link || !title) return;
 
+      // 补全链接
       if (!link.startsWith("http")) {
         link = link.startsWith("//")
           ? `https:${link}`
           : `https://javday.app${link.startsWith("/") ? "" : "/"}${link}`;
       }
-
-      link = link.replace(/([^:]\/)\/+/g, "$1");
+      link = link.replace(/([^:]\/)\/+/g, '$1');
 
       videoItems.push({
         id: `${index}|${link}`,
@@ -558,11 +562,11 @@ async function search(params = {}) {
       });
     });
 
-    return videoItems;
+    return videoItems; // 无结果时返回空数组
 
   } catch (error) {
     console.error(`${JAVDAY_LOG_PREFIX} 搜索失败: ${error.message}`);
-    throw error;
+    throw new Error(`搜索视频失败: ${error.message}`);
   }
 }
 async function loadDetail(link) {
