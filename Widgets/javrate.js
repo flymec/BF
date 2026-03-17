@@ -1,10 +1,10 @@
 var WidgetMetadata = {
-  id: "ti.bemarkt.javrate",
+  id: "fly.javrate",
   title: "JAVRate",
-  description: "获取 JAVRate 推荐",
-  author: "Ti",
+  description: "JAVRate完美",
+  author: "fly",
   site: "https://www.javrate.com/",
-  version: "2.1.0",
+  version: "2.2.2",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -925,10 +925,10 @@ let artistMapCacheTime = 0;
 const CACHE_DURATION = 24 * 60 * 60 * 1000;
 const BASE_URL = "https://www.javrate.com";
 
-function getCommonHeaders() {
+function getCommonHeaders(referer) {
   return {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-    Referer: BASE_URL
+    Referer: referer || BASE_URL
   };
 }
 
@@ -980,24 +980,16 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
   const mainTitleText = titleClone.text().trim();
   const rawTitle = movieNumber ? `${movieNumber} ${mainTitleText}` : mainTitleText;
 
-  let videoUrl = null;
   let imgSrc = null;
-  let description = "";
 
   try {
     const schemaScript = $('script[type="application/ld+json"]').html();
     if (schemaScript) {
       const schemaData = JSON.parse(schemaScript);
-      videoUrl = schemaData.contentUrl || schemaData.embedUrl;
       imgSrc = schemaData.thumbnailUrl;
-      description = schemaData.description || "";
     }
   } catch (e) {
     console.error(`解析 LD+JSON schema 失败:`, e.message);
-  }
-
-  if (!videoUrl) {
-    videoUrl = $(".player-box iframe").attr("src");
   }
 
   let releaseDate = "";
@@ -1018,10 +1010,6 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
     }
   }
 
-  if (!description) {
-    description = $(".description-text").text().trim();
-  }
-
   const tags = [];
   $("section.movie-keywords a.badge").each((idx, element) => {
     tags.push($(element).text().trim());
@@ -1032,6 +1020,11 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
   if (!imgSrc) {
     imgSrc = backdropImg;
   }
+
+  // 播放器 iframe — <iframe id="v2-player" src="/Player/V2?payload=...">
+  const iframeSrc = $("#v2-player").attr("src")
+    || $("iframe[src*='/Player/V2']").attr("src")
+    || $("iframe[src*='payload']").attr("src");
 
   const relatedItems = [];
   $("div.alike-grid-container .mgn-item").each((idx, element) => {
@@ -1065,22 +1058,17 @@ function parseDetailPage(detailPageHtml, detailPageUrl) {
         });
       }
     } catch (e) {
-      console.error(`解析条目出错: 第 ${idx + 1} 个条目时出错:`, e.message);
+      console.error(`解析条目出错:`, e.message);
     }
   });
 
   return {
-    id: detailPageUrl,
-    type: "url",
-    title: rawTitle,
-    videoUrl: videoUrl,
-    description: description || "暂无简介",
-    releaseDate: releaseDate,
-    genreTitle: genreTitle,
-    backdropPath: imgSrc || "",
-    link: detailPageUrl,
-    customHeaders: videoUrl ? { Referer: "https://iframe.mediadelivery.net/" } : undefined,
-    relatedItems: relatedItems,
+    rawTitle,
+    imgSrc: imgSrc || "",
+    releaseDate,
+    genreTitle,
+    iframeSrc,
+    relatedItems,
   };
 }
 
@@ -1145,14 +1133,7 @@ async function fetchDataForPath(path, params = {}) {
   if (path.includes("/actor/movie/") && path.endsWith(".html")) {
     const artistId = path.match(/\/actor\/movie\/([^\/]+)\.html$/)?.[1];
     if (!artistId) {
-      return [{
-        id: "artist-id-error", 
-        type: "url", 
-        title: "艺人识别错误", 
-        description: `无法从URL识别艺人ID: ${path}`, 
-        backdropPath: "", 
-        link: path 
-      }];
+      return [{ id: "artist-id-error", type: "url", title: "艺人识别错误", description: `无法从URL识别艺人ID: ${path}`, backdropPath: "", link: path }];
     }
     requestUrl = page > 1 
       ? `${BASE_URL}/actor/movie/1-0-2-${page}/${artistId}.html`
@@ -1174,11 +1155,7 @@ async function fetchDataForPath(path, params = {}) {
       ? `${BASE_URL}${sortByPath}?page=${page}` 
       : `${BASE_URL}${sortByPath}`;
   }
-  else if ([
-    "/menu/uncensored/5-2-", 
-    "/menu/censored/5-2-", 
-    "/menu/chinese/5-2-"
-  ].includes(path)) {
+  else if (["/menu/uncensored/5-2-", "/menu/censored/5-2-", "/menu/chinese/5-2-"].includes(path)) {
     requestUrl = `${BASE_URL}${path}${page}`;
   }
   else if (path === "/movie/new/") {
@@ -1193,95 +1170,130 @@ async function fetchDataForPath(path, params = {}) {
 
   try {
     const response = await Widget.http.get(requestUrl, {
-      headers: getCommonHeaders(),
+      headers: getCommonHeaders(BASE_URL),
     });
     
     if (!response?.data) {
-      return [{
-        id: `${requestUrl}-error`,
-        type: "url",
-        title: "加载失败",
-        description: `服务器未返回有效数据: ${requestUrl}`,
-        backdropPath: "",
-        link: requestUrl
-      }];
+      return [{ id: `${requestUrl}-error`, type: "url", title: "加载失败", description: `服务器未返回有效数据`, backdropPath: "", link: requestUrl }];
     }
     if (response.data.includes("抱歉，没有找到")) {
-      return [{
-        id: `${requestUrl}-no-content`,
-        type: "url",
-        title: "未找到影片",
-        description: "此页面没有任何影片，请尝试其他分页或分类",
-        backdropPath: "",
-        link: requestUrl
-      }];
+      return [{ id: `${requestUrl}-no-content`, type: "url", title: "未找到影片", description: "此页面没有任何影片，请尝试其他分页或分类", backdropPath: "", link: requestUrl }];
     }
 
     const $ = Widget.html.load(response.data);
     const items = await parseItems(BASE_URL, $, requestUrl);
     
     if (items.length === 0) {
-      return [{
-        id: `${requestUrl}-empty`,
-        type: "url",
-        title: "无匹配影片",
-        description: "未找到任何影片，可能是内容已变更",
-        backdropPath: "",
-        link: requestUrl
-      }];
+      return [{ id: `${requestUrl}-empty`, type: "url", title: "无匹配影片", description: "未找到任何影片，可能是内容已变更", backdropPath: "", link: requestUrl }];
     }
     
     return items;
   } catch (error) {
     console.error(`请求失败: ${requestUrl} - ${error.message}`);
-    return [{
-      id: `${requestUrl}-error`,
-      type: "url",
-      title: `加载失败: 第${page}页`,
-      description: `请求出错: ${error.message}`,
-      backdropPath: "",
-      link: requestUrl
-    }];
+    return [{ id: `${requestUrl}-error`, type: "url", title: `加载失败: 第${page}页`, description: `请求出错: ${error.message}`, backdropPath: "", link: requestUrl }];
   }
 }
 
 
+// == loadDetail ===============================================================
+//
+// 解析流程（已通过浏览器实际验证）：
+//
+// 步骤 1：请求详情页
+//   从 <iframe id="v2-player" src="/Player/V2?payload=..."> 取播放器地址
+//
+// 步骤 2：请求 /Player/V2?payload=...
+//   页面源码里有：
+//     initialSignedUrl: 'https://videocdn.avking.xyz/bcdn_token=.../.../playlist.m3u8'
+//   这是带鉴权 token 的完整 m3u8 直链
+//
+// 步骤 3：type: "url" 直播 m3u8
+//   Referer 设 https://www.javrate.com/（CDN 防盗链校验此值）
+//
+// ============================================================================
+
 async function loadDetail(linkValue) {
-  let currentBaseUrl = "https://www.javrate.com";
-  
+  let currentBaseUrl = BASE_URL;
   const urlMatch = linkValue.match(/^(https?:\/\/[^/]+)/);
-  if (urlMatch) {
-    currentBaseUrl = urlMatch[0];
-  } else {
-    console.warn(`loadDetail: 无法从链接 ${linkValue} 中解析baseUrl，将使用默认值`);
-  }
-  
+  if (urlMatch) currentBaseUrl = urlMatch[0];
+
   try {
-    const response = await Widget.http.get(linkValue, {
-      headers: getCommonHeaders(),
+    // 步骤 1：请求详情页
+    const detailResponse = await Widget.http.get(linkValue, {
+      headers: getCommonHeaders(BASE_URL),
     });
     
-    if (!response || !response.data) {
+    if (!detailResponse || !detailResponse.data) {
       throw new Error("无法加载详情页面: " + linkValue);
     }
     
-    const detailData = parseDetailPage(response.data, linkValue);
+    const detailData = parseDetailPage(detailResponse.data, linkValue);
+
+    // 步骤 2：从 /Player/V2 页面取 initialSignedUrl
+    let videoUrl = null;
+
+    if (detailData.iframeSrc) {
+      const playerUrl = detailData.iframeSrc.startsWith("http")
+        ? detailData.iframeSrc
+        : `${currentBaseUrl}${detailData.iframeSrc.startsWith("/") ? "" : "/"}${detailData.iframeSrc}`;
+
+      try {
+        const playerResponse = await Widget.http.get(playerUrl, {
+          headers: getCommonHeaders(linkValue),
+        });
+
+        if (playerResponse?.data) {
+          const html = playerResponse.data;
+
+          // 优先：initialSignedUrl（含完整 token 的 playlist.m3u8）
+          const initialMatch = html.match(/initialSignedUrl\s*:\s*['"]([^'"]+)['"]/);
+          if (initialMatch?.[1]) {
+            videoUrl = initialMatch[1];
+          }
+
+          // 备用：signedUrl（目录地址，补全后缀）
+          if (!videoUrl) {
+            const signedMatch = html.match(/[^a-zA-Z]signedUrl\s*:\s*['"]([^'"]+)['"]/);
+            if (signedMatch?.[1]) {
+              videoUrl = signedMatch[1].replace(/\/+$/, "") + "/playlist.m3u8";
+            }
+          }
+
+          // 兜底：直接扫描 videocdn 域名的 m3u8 地址
+          if (!videoUrl) {
+            const cdnMatch = html.match(/(https?:\/\/videocdn\.[^'"]+\.m3u8[^'"]*)/);
+            if (cdnMatch?.[1]) videoUrl = cdnMatch[1];
+          }
+        }
+      } catch (err) {
+        console.warn(`Player/V2 请求失败: ${err.message}`);
+      }
+    }
+
+    if (!videoUrl) {
+      throw new Error("无法获取视频地址");
+    }
 
     return {
       id: linkValue,
       type: "url",
-      title: detailData.title,
-      videoUrl: detailData.videoUrl,
-      description: detailData.description,
+      title: detailData.rawTitle,
+      videoUrl: videoUrl,
+      description: detailData.genreTitle || "暂无简介",
       releaseDate: detailData.releaseDate,
       genreTitle: detailData.genreTitle,
-      backdropPath: detailData.backdropPath || "",
-      link: detailData.link,
-      customHeaders: detailData.customHeaders,
+      backdropPath: detailData.imgSrc || "",
+      link: linkValue,
+      // CDN 防盗链校验 Referer 为 https://www.javrate.com/
+      customHeaders: {
+        "Referer": "https://www.javrate.com/",
+        "Origin": "https://www.javrate.com",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+      },
       relatedItems: detailData.relatedItems || [],
     };
   } catch (error) {
-    console.error(`loadDetail: 加载详情失败 ${linkValue}:`, error);
+    console.error(`loadDetail 失败 ${linkValue}:`, error);
     return {
       id: linkValue,
       type: "url",
@@ -1297,19 +1309,19 @@ async function loadDetail(linkValue) {
 async function loadPage(params) {
   let path = "";
   
-    if (params?.artistId) {
+  if (params?.artistId) {
     try {
       const artistMap = await fetchArtistMap();
     
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.artistId);
     
       if (!isUUID) {
-        const normalizedInput = await   normalizeArtistName(params.artistId);
+        const normalizedInput = await normalizeArtistName(params.artistId);
         let matchedId = null;
         let matchedName = null;
         let matchScore = 0;
       
-        for (const [name, id] of  Object.entries(artistMap)) {
+        for (const [name, id] of Object.entries(artistMap)) {
           const normalizedMapName = await normalizeArtistName(name);
         
           if (normalizedMapName === normalizedInput) {
@@ -1319,7 +1331,7 @@ async function loadPage(params) {
             break;
           }
         
-          if  (normalizedMapName.includes(normalizedInput)) {
+          if (normalizedMapName.includes(normalizedInput)) {
             const score = normalizedInput.length * 10;
             if (score > matchScore) {
               matchScore = score;
@@ -1356,23 +1368,18 @@ async function loadPage(params) {
       }];
     }
   }
-
-  
   else if (params && params.tagType && params.tagValue) {
     const encodedTag = encodeURIComponent(params.tagValue);
     path = `/keywords/movie/${encodedTag}`;
   }
-  
   else if (params && params.issuer) {
     const decodedIssuer = decodeURIComponent(params.issuer);
     const encodedIssuer = encodeURIComponent(decodedIssuer);
     path = `/Issuer/${encodedIssuer}`;
   }
-  
   else if (params && params.categoryType) {
     path = params.categoryType;
   }
-  
   else {
     return [{
       id: "param-error",
