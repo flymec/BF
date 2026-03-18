@@ -1,142 +1,176 @@
 var WidgetMetadata = {
-  id: "com.iqiyi.widget",
-  title: "爱奇艺 iQIYI",
-  description: "浏览爱奇艺热门剧集、电影、综艺等（API版）",
+  id: "com.iqiyi.hotlist",
+  title: "爱奇艺热门推荐",
+  description: "基于爱奇艺热搜榜的各分类热门视频",
   author: "YourName",
   site: "https://www.iqiyi.com",
   version: "1.0.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
-    // 搜索模块（需要抓包确定搜索接口）
     {
-      title: "搜索爱奇艺",
-      description: "搜索剧集、电影、综艺等内容",
+      title: "🔥 热搜榜",
+      description: "爱奇艺热搜榜热门视频",
       requiresWebView: false,
-      functionName: "search",
-      cacheDuration: 3600,
-      params: [
-        { name: "keyword", title: "输入关键词…", type: "input", value: "", description: "剧名、演员、导演等" },
-        { name: "page", title: "页码", type: "page", description: "搜索结果页码" }
-      ]
-    },
-    // 电视剧模块（以下 URL 为示例，实际应替换为对应的 API）
-    {
-      title: "电视剧",
-      description: "浏览热门电视剧",
-      requiresWebView: false,
-      functionName: "loadPage",
+      functionName: "loadHotList",
       cacheDuration: 3600,
       params: [
         {
-          name: "apiUrl",
-          title: "API地址",
+          name: "category",
+          title: "分类",
           type: "constant",
-          value: "https://www.iqiyi.com/prelw/portal/lw/v7/channel/tv", // 推测地址
-        },
-        {
-          name: "sort_by",
-          title: "排序方式",
-          type: "enumeration",
-          enumOptions: [
-            { title: "最新上线", value: "new" },
-            { title: "最热播放", value: "hot" }
-          ],
-          value: "hot",
-          description: "选择视频排序方式"
-        },
-        {
-          name: "page",
-          title: "页码",
-          type: "page"
+          value: "热搜", // 对应 hotList 中的分类标题
         }
       ]
     },
-    // 电影模块
     {
-      title: "电影",
-      description: "浏览最新电影",
+      title: "📺 热门电视剧",
+      description: "爱奇艺热门电视剧",
       requiresWebView: false,
-      functionName: "loadPage",
+      functionName: "loadHotList",
       cacheDuration: 3600,
       params: [
         {
-          name: "apiUrl",
-          title: "API地址",
+          name: "category",
+          title: "分类",
           type: "constant",
-          value: "https://www.iqiyi.com/prelw/portal/lw/v7/channel/movie", // 推测
-        },
-        { name: "sort_by", title: "排序方式", type: "enumeration", enumOptions: [ { title: "最新上线", value: "new" }, { title: "最热播放", value: "hot" } ], value: "hot" },
-        { name: "page", title: "页码", type: "page" }
+          value: "电视剧",
+        }
       ]
     },
-    // 综艺模块
     {
-      title: "综艺",
-      description: "浏览热门综艺",
+      title: "🎬 热门电影",
+      description: "爱奇艺热门电影",
       requiresWebView: false,
-      functionName: "loadPage",
+      functionName: "loadHotList",
       cacheDuration: 3600,
       params: [
-        { name: "apiUrl", title: "API地址", type: "constant", value: "https://www.iqiyi.com/prelw/portal/lw/v7/channel/variety" },
-        { name: "sort_by", title: "排序方式", type: "enumeration", enumOptions: [ { title: "最新上线", value: "new" }, { title: "最热播放", value: "hot" } ], value: "hot" },
-        { name: "page", title: "页码", type: "page" }
+        {
+          name: "category",
+          title: "分类",
+          type: "constant",
+          value: "电影",
+        }
       ]
     },
-    // 动漫模块
     {
-      title: "动漫",
-      description: "浏览热门动漫",
+      title: "🎤 热门综艺",
+      description: "爱奇艺热门综艺",
       requiresWebView: false,
-      functionName: "loadPage",
+      functionName: "loadHotList",
       cacheDuration: 3600,
       params: [
-        { name: "apiUrl", title: "API地址", type: "constant", value: "https://www.iqiyi.com/prelw/portal/lw/v7/channel/cartoon" },
-        { name: "sort_by", title: "排序方式", type: "enumeration", enumOptions: [ { title: "最新上线", value: "new" }, { title: "最热播放", value: "hot" } ], value: "hot" },
-        { name: "page", title: "页码", type: "page" }
+        {
+          name: "category",
+          title: "分类",
+          type: "constant",
+          value: "综艺",
+        }
       ]
     },
-    // 短剧模块（需确认实际频道）
     {
-      title: "短剧",
-      description: "浏览热门短剧",
+      title: "📱 热门短剧",
+      description: "爱奇艺热门短剧",
       requiresWebView: false,
-      functionName: "loadPage",
+      functionName: "loadHotList",
       cacheDuration: 3600,
       params: [
-        { name: "apiUrl", title: "API地址", type: "constant", value: "https://www.iqiyi.com/prelw/portal/lw/v7/channel/shortplay" },
-        { name: "sort_by", title: "排序方式", type: "enumeration", enumOptions: [ { title: "最新上线", value: "new" }, { title: "最热播放", value: "hot" } ], value: "hot" },
-        { name: "page", title: "页码", type: "page" }
+        {
+          name: "category",
+          title: "分类",
+          type: "constant",
+          value: "短剧",
+        }
+      ]
+    },
+    {
+      title: "🆓 热门免费",
+      description: "爱奇艺热门免费视频",
+      requiresWebView: false,
+      functionName: "loadHotList",
+      cacheDuration: 3600,
+      params: [
+        {
+          name: "category",
+          title: "分类",
+          type: "constant",
+          value: "免费",
+        }
       ]
     }
   ]
 };
 
-const IQIYI_LOG_PREFIX = "Widget: iQiyi API -";
+const IQIYI_LOG_PREFIX = "Widget: iQiyi HotList -";
 const IQIYI_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-// ---------- 辅助函数：构建API请求参数 ----------
-function buildApiUrl(baseApiUrl, sortBy, page) {
-  // 根据实际抓包结果调整参数名
-  const params = new URLSearchParams({
-    lwaFastKey: baseApiUrl.includes('tv') ? 'Page_tv_1' : 'Page_recommend_1', // 需动态生成或从base中提取
-    page: page,
-    sort: sortBy === 'hot' ? 'hot' : 'new',
-    v: '17.033.24824' // 版本号可能变化，最好从原页面提取或忽略
-  });
-  return `${baseApiUrl}?${params.toString()}`;
+// hotList 接口地址（您已验证有效的）
+const HOTLIST_API = "https://mesh.if.iqiyi.com/portal/lw/search/keywords/hotList?device_id=b4355997ee51ca6f8963fc194f7cb9c3&v=17.033.24824&appMode=&src=";
+
+// 从 playUrl 中提取 albumid
+function extractAlbumId(playUrl) {
+  if (!playUrl) return null;
+  const match = playUrl.match(/albumid=(\d+)/);
+  return match ? match[1] : null;
 }
 
-// ---------- 核心函数：加载列表（基于API）----------
-async function loadPage(params = {}) {
-  const apiUrl = params.apiUrl;      // 传入的是API基地址
-  const sortBy = params.sort_by || "hot";
-  const page = parseInt(params.page, 10) || 1;
+// 构建详情页链接（优先使用 albumid，其次使用 docId）
+function buildDetailLink(item) {
+  const albumId = extractAlbumId(item.playUrl);
+  if (albumId) {
+    return `https://www.iqiyi.com/a_${albumId}.html`;
+  }
+  if (item.docId) {
+    return `https://www.iqiyi.com/play?docId=${item.docId}`;
+  }
+  // 最后备选：使用 qipuId 构造（不一定有效）
+  if (item.qipuId) {
+    return `https://www.iqiyi.com/lib/${item.qipuId}.html`;
+  }
+  return null;
+}
 
-  const targetUrl = buildApiUrl(apiUrl, sortBy, page);
+// 解析单个视频项为标准格式
+function parseVideoItem(item, categoryName) {
+  if (!item || !item.title) return null;
+
+  const link = buildDetailLink(item);
+  if (!link) {
+    console.log(`${IQIYI_LOG_PREFIX} 无法构建链接: ${item.title}`);
+    return null;
+  }
+
+  // 处理封面图（确保完整https）
+  let imgSrc = item.image || '';
+  if (imgSrc && !imgSrc.startsWith('http')) {
+    imgSrc = 'https:' + imgSrc;
+  }
+
+  // 构建描述信息
+  let description = item.tag || '';
+  if (item.metaTags && Array.isArray(item.metaTags)) {
+    const tags = item.metaTags.map(t => t.name).filter(Boolean).join(' · ');
+    if (tags) description = description ? `${description} | ${tags}` : tags;
+  }
+
+  return {
+    id: `${categoryName}_${item.qipuId || item.docId || Date.now()}`,
+    type: "url",
+    title: item.title,
+    imgSrc: imgSrc,
+    backdropPath: imgSrc,
+    link: link,                 // 详情页链接
+    description: description || `爱奇艺热门${categoryName}`,
+    mediaType: "movie",
+  };
+}
+
+// 核心函数：加载 hotList 并过滤指定分类
+async function loadHotList(params) {
+  const targetCategory = params.category || "热搜";  // 默认热搜
 
   try {
-    const response = await Widget.http.get(targetUrl, {
+    const response = await Widget.http.get(HOTLIST_API, {
       headers: {
         "User-Agent": IQIYI_USER_AGENT,
         "Referer": "https://www.iqiyi.com/",
@@ -144,154 +178,53 @@ async function loadPage(params = {}) {
     });
 
     if (!response?.data) {
-      throw new Error("无法获取API数据");
+      throw new Error("无法获取 hotList 数据");
     }
 
-    // 假设API返回JSON格式，以下字段需根据实际数据调整
     let data = response.data;
-    // 如果返回的是JSONP或文本，可能需要解析
     if (typeof data === 'string') {
-      try {
-        data = JSON.parse(data);
-      } catch (e) {
-        // 可能是JSONP，尝试提取
-        const match = data.match(/\(({.+})\)/);
-        if (match) data = JSON.parse(match[1]);
-      }
+      data = JSON.parse(data);
     }
 
-    // 假设数据在 data.list 或 data.data 中
-    const list = data.list || data.data || data.videos || [];
-    const items = list.map((item, index) => {
-      // 根据实际返回字段映射
-      let link = item.url || item.link || item.playUrl;
-      if (link && !link.startsWith('http')) {
-        link = 'https://www.iqiyi.com' + (link.startsWith('/') ? '' : '/') + link;
-      }
-      return {
-        id: `${index}|${link}`,
-        type: "url",
-        title: item.title || item.name,
-        imgSrc: item.image || item.pic || item.cover,
-        backdropPath: item.image || item.pic,
-        link: link,
-        description: item.desc || item.subtitle || '',
-        mediaType: "movie",
-      };
-    });
+    // 在 data.hotQuery 数组中查找指定分类
+    const categories = data.hotQuery || [];
+    const target = categories.find(cat => cat.title === targetCategory);
+
+    if (!target || !Array.isArray(target.items)) {
+      console.warn(`${IQIYI_LOG_PREFIX} 未找到分类 "${targetCategory}" 或该分类下无数据`);
+      return [];
+    }
+
+    // 解析该分类下的所有视频项
+    const items = target.items
+      .map(item => parseVideoItem(item, targetCategory))
+      .filter(item => item !== null);
 
     return items;
   } catch (error) {
-    console.error(`${IQIYI_LOG_PREFIX} 加载列表失败: ${error.message}`);
+    console.error(`${IQIYI_LOG_PREFIX} 加载失败: ${error.message}`);
     throw error;
   }
 }
 
-// ---------- 搜索函数（需抓包确定搜索API）----------
-async function search(params = {}) {
-  const keyword = params.keyword || "";
-  const page = parseInt(params.page, 10) || 1;
-
-  if (!keyword) {
-    throw new Error("请输入搜索关键词");
-  }
-
-  // 推测搜索API，需实际抓包确认
-  const searchApi = "https://www.iqiyi.com/search/api/v1";
-  const targetUrl = `${searchApi}?key=${encodeURIComponent(keyword)}&page=${page}`;
-
-  try {
-    const response = await Widget.http.get(targetUrl, {
-      headers: {
-        "User-Agent": IQIYI_USER_AGENT,
-        "Referer": "https://www.iqiyi.com/",
-      }
-    });
-
-    // 同样解析JSON，结构需适配
-    let data = response.data;
-    if (typeof data === 'string') data = JSON.parse(data);
-
-    const list = data.list || data.data || data.items || [];
-    const items = list.map((item, index) => {
-      let link = item.url || item.link;
-      if (link && !link.startsWith('http')) {
-        link = 'https://www.iqiyi.com' + (link.startsWith('/') ? '' : '/') + link;
-      }
-      return {
-        id: `${index}|${link}`,
-        type: "url",
-        title: item.title || item.name,
-        imgSrc: item.image || item.pic,
-        backdropPath: item.image || item.pic,
-        link: link,
-        description: `搜索: ${keyword}`,
-        mediaType: "movie",
-      };
-    });
-
-    return items;
-  } catch (error) {
-    console.error(`${IQIYI_LOG_PREFIX} 搜索失败: ${error.message}`);
-    throw error;
-  }
-}
-
-// ---------- 详情页：获取视频播放地址 ----------
+// 详情函数：返回视频播放地址（因爱奇艺播放地址复杂，此处返回详情页链接，让外部播放器尝试）
 async function loadDetail(link) {
-  try {
-    // 爱奇艺的视频播放地址通常需要从播放页解析或通过专用API获取
-    // 这里提供两种思路：
-
-    // 1. 直接请求播放页，从HTML中提取（但页面可能动态加载）
-    const response = await Widget.http.get(link, {
-      headers: {
-        "User-Agent": IQIYI_USER_AGENT,
-        "Referer": link,
-      }
-    });
-
-    // 尝试从HTML中提取视频地址（可能性较低）
-    const $ = Widget.html.load(response.data);
-    // 常见模式：查找 video 标签或 data-player 属性
-    let videoUrl = $('video').attr('src');
-    if (videoUrl) {
-      return {
-        id: link,
-        type: "url",
-        videoUrl: videoUrl,
-        customHeaders: { "Referer": link, "User-Agent": IQIYI_USER_AGENT }
-      };
+  // 由于无法直接获取真实视频流，我们返回详情页链接。
+  // 某些播放器可能支持加载网页，但通常无法直接播放。
+  // 您可以尝试在此处实现更复杂的播放地址解析，但需要额外的抓包工作。
+  return {
+    id: link,
+    type: "url",
+    videoUrl: link,  // 将详情页链接作为视频地址返回，期望外部播放器能够处理（可能失败）
+    customHeaders: {
+      "User-Agent": IQIYI_USER_AGENT,
+      "Referer": "https://www.iqiyi.com/",
     }
-
-    // 2. 或者调用专门的视频地址API（需要抓包）
-    // 例如从播放页中找到类似 getVideoUrl 的接口
-    // 这里仅为示例，实际需替换
-    const videoApi = "https://www.iqiyi.com/player/api/getVideoUrl";
-    const videoId = extractVideoId(link); // 需要实现从链接提取视频ID
-    const apiResponse = await Widget.http.get(`${videoApi}?vid=${videoId}`, {
-      headers: { "User-Agent": IQIYI_USER_AGENT, "Referer": link }
-    });
-    const apiData = typeof apiResponse.data === 'string' ? JSON.parse(apiResponse.data) : apiResponse.data;
-    if (apiData && apiData.url) {
-      return {
-        id: link,
-        type: "url",
-        videoUrl: apiData.url,
-        customHeaders: { "Referer": link, "User-Agent": IQIYI_USER_AGENT }
-      };
-    }
-
-    throw new Error("未找到可播放的视频源");
-  } catch (error) {
-    console.error(`${IQIYI_LOG_PREFIX} 加载详情失败: ${error.message}`);
-    throw error;
-  }
+  };
 }
 
-// 辅助函数：从链接提取视频ID（根据实际URL格式实现）
-function extractVideoId(link) {
-  // 示例：https://www.iqiyi.com/v_19rrmh4xps.html  -> v_19rrmh4xps
-  const match = link.match(/\/(v_[a-zA-Z0-9]+)\.html/);
-  return match ? match[1] : '';
+// 为了兼容旧版调用方式，保留 search 函数（此处简单返回空）
+async function search(params) {
+  console.warn(`${IQIYI_LOG_PREFIX} 搜索功能暂未实现`);
+  return [];
 }
