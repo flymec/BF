@@ -1,10 +1,10 @@
 var WidgetMetadata = {
     id: "missav",
     title: "MissAV",
-    description: "获取 MissAV 推荐",
+    description: "MissAV源码",
     author: "Butterflyz",
-    site: "https://for-ward.vercel.app",
-    version: "1.0.0",
+    site: "miss",
+    version: "1.0.1",
     requiredVersion: "0.0.2",
     detailCacheDuration: 300,
     modules: [
