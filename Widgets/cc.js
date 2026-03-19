@@ -1,47 +1,38 @@
-// CapyPlayer Widget for Jable.TV
-// 通过解析 HTML 页面获取视频列表与播放地址
-
 var WidgetMetadata = {
 id: “jable_tv”,
 title: “Jable.TV”,
-description: “Jable.TV 免費高清AV在線看，支持最新更新、熱門影片、分類瀏覽”,
-version: “1.0.0”,
+description: “Jable.TV AV free streaming - latest, hot, categories, search”,
+version: “1.0.1”,
 author: “CapyPlayer”,
 icon: “https://assets-cdn.jable.tv/assets/images/logo.png”,
 modules: [
 {
 id: “latest”,
-title: “最近更新”,
+title: “\u6700\u8fd1\u66f4\u65b0”,
 type: “media_list”,
 functionName: “getLatest”,
 cacheDuration: 1800,
-params: [
-{ name: “page”, type: “page” }
-]
+params: [{ name: “page”, type: “page” }]
 },
 {
 id: “hot”,
-title: “熱門影片”,
+title: “\u71b1\u9580\u5f71\u7247”,
 type: “media_list”,
 functionName: “getHot”,
 cacheDuration: 3600,
-params: [
-{ name: “page”, type: “page” }
-]
+params: [{ name: “page”, type: “page” }]
 },
 {
 id: “new_release”,
-title: “全新上市”,
+title: “\u5168\u65b0\u4e0a\u5e02”,
 type: “media_list”,
 functionName: “getNewRelease”,
 cacheDuration: 3600,
-params: [
-{ name: “page”, type: “page” }
-]
+params: [{ name: “page”, type: “page” }]
 },
 {
 id: “category_list”,
-title: “影片主題”,
+title: “\u5f71\u7247\u4e3b\u984c”,
 type: “category”,
 functionName: “getCategories”,
 cacheDuration: 86400,
@@ -49,23 +40,23 @@ params: []
 },
 {
 id: “category_videos”,
-title: “主題影片”,
+title: “\u4e3b\u984c\u5f71\u7247”,
 type: “media_list”,
 functionName: “getCategoryVideos”,
 cacheDuration: 3600,
 params: [
-{ name: “category”, type: “string”, label: “分類路徑”, defaultValue: “chinese-subtitle” },
+{ name: “category”, type: “string”, label: “\u5206\u985e\u8def\u5f91”, defaultValue: “chinese-subtitle” },
 { name: “page”, type: “page” }
 ]
 },
 {
 id: “search”,
-title: “搜尋”,
+title: “\u641c\u5c0b”,
 type: “media_list”,
 functionName: “searchVideos”,
 cacheDuration: 600,
 params: [
-{ name: “keyword”, type: “string”, label: “搜尋關鍵字”, required: true },
+{ name: “keyword”, type: “string”, label: “\u641c\u5c0b\u95dc\u9375\u5b57”, required: true },
 { name: “page”, type: “page” }
 ]
 }
@@ -73,8 +64,6 @@ params: [
 };
 
 var BASE_URL = “https://jable.tv”;
-
-// ––––– 通用工具 –––––
 
 function ensureArray(v) {
 return Array.isArray(v) ? v : [];
@@ -92,11 +81,9 @@ headers: {
 if (!resp.ok) {
 throw new Error(“HTTP “ + resp.status + “ - “ + url);
 }
-var html = typeof resp.data === “string” ? resp.data : JSON.stringify(resp.data);
-return html;
+return typeof resp.data === “string” ? resp.data : JSON.stringify(resp.data);
 }
 
-// 从视频页面 HTML 解析卡片列表
 function parseVideoCards(html, docId) {
 var items = [];
 try {
@@ -104,15 +91,13 @@ var cards = Widget.dom.select(docId, “.video-img-box”);
 if (!cards || cards.length === 0) {
 cards = Widget.dom.select(docId, “.img-box”);
 }
-cards.forEach(function(card, idx) {
+ensureArray(cards).forEach(function(card, idx) {
 try {
-// 获取链接
 var linkEl = Widget.dom.select(card, “a”);
 var link = linkEl && linkEl[0] ? (linkEl[0].attributes && linkEl[0].attributes.href) : null;
 if (!link) return;
 
 ```
-    // 获取封面图
     var imgEl = Widget.dom.select(card, "img");
     var poster = "";
     if (imgEl && imgEl[0]) {
@@ -120,20 +105,17 @@ if (!link) return;
       poster = attrs["data-src"] || attrs["src"] || attrs["data-original"] || "";
     }
 
-    // 获取标题
     var titleEl = Widget.dom.select(card, "h6");
     if (!titleEl || titleEl.length === 0) {
       titleEl = Widget.dom.select(card, ".title");
     }
     var title = titleEl && titleEl[0] ? (titleEl[0].text || "").trim() : "";
 
-    // 获取时长
     var durEl = Widget.dom.select(card, ".duration");
     var duration = durEl && durEl[0] ? (durEl[0].text || "").trim() : "";
 
     if (!link || !title) return;
 
-    // 从链接提取 ID（如 /videos/abc-123/ -> abc-123）
     var idMatch = link.match(/\/videos\/([^\/]+)/);
     var id = idMatch ? idMatch[1] : ("item_" + idx);
 
@@ -156,7 +138,6 @@ console.error(“parseVideoCards error: “ + e.message);
 return items;
 }
 
-// 通用列表页抓取
 async function fetchListPage(path, page) {
 var url = BASE_URL + path;
 if (page && page > 1) {
@@ -169,8 +150,6 @@ Widget.dom.remove(docId);
 console.log(“fetchListPage count: “ + items.length);
 return items;
 }
-
-// ––––– 模块函数 –––––
 
 async function getLatest(params) {
 try {
@@ -208,7 +187,7 @@ var catEls = Widget.dom.select(docId, “.category-img-box”);
 if (!catEls || catEls.length === 0) {
 catEls = Widget.dom.select(docId, “.img-box”);
 }
-catEls.forEach(function(el, idx) {
+ensureArray(catEls).forEach(function(el, idx) {
 try {
 var linkEl = Widget.dom.select(el, “a”);
 var href = linkEl && linkEl[0] ? (linkEl[0].attributes && linkEl[0].attributes.href) : null;
@@ -228,7 +207,6 @@ if (!href) return;
 
     if (!href || !name) return;
 
-    // 从链接提取分类路径，如 /categories/roleplay/ -> roleplay
     var catMatch = href.match(/\/categories\/([^\/]+)/);
     var catSlug = catMatch ? catMatch[1] : ("cat_" + idx);
 
@@ -282,39 +260,31 @@ return [];
 }
 }
 
-// ––––– loadDetail –––––
-// 解析视频详情页，从 <script> 标签中提取 m3u8 URL
-
 async function loadDetail(link) {
 try {
 console.log(“loadDetail: “ + link);
 var html = await fetchHtml(link);
 
 ```
-// 从 script 标签中提取 m3u8 URL
 var m3u8Match = html.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/);
 var videoUrl = m3u8Match ? m3u8Match[0] : null;
 
-// 提取标题
-var titleMatch = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+var titleMatch = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i);
 if (!titleMatch) {
   titleMatch = html.match(/<title>([^<]+)<\/title>/i);
 }
 var title = titleMatch ? titleMatch[1].trim() : "";
 
-// 提取封面
-var coverMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+var coverMatch = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i);
 var posterUrl = coverMatch ? coverMatch[1] : "";
 
 if (!videoUrl) {
-  console.error("loadDetail: m3u8 not found in " + link);
-  // 尝试第二种匹配方式：hlsUrl 或 file:
-  var hlsMatch = html.match(/(?:hlsUrl|file)['":\s]+["']?(https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*)/i);
+  var hlsMatch = html.match(/(?:hlsUrl|file)\s*[=:]\s*["'](https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*)/i);
   if (hlsMatch) videoUrl = hlsMatch[1];
 }
 
 if (!videoUrl) {
-  throw new Error("未能提取到播放地址，可能需要登入或頁面結構已變更");
+  throw new Error("m3u8 not found, login may be required");
 }
 
 return {
