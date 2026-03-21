@@ -67,7 +67,6 @@ async function search(params) {
  var tvId = item.tvId || "";
  var videoId = item.videoId || "";
  
- // 构建播放页链接
  var link = "";
  if (albumId) {
  link = "https://www.iqiyi.com/a_" + albumId + ".html";
@@ -83,9 +82,7 @@ async function search(params) {
  title: item.title || "",
  description: item.description || "",
  posterPath: item.imageUrl || item.picUrl || "",
- link: link,
- albumId: albumId,
- tvId: tvId
+ link: link
  };
  });
 }
@@ -199,46 +196,9 @@ async function getVarietyHot(params) {
 }
 
 async function loadDetail(link) {
- try {
- var response = await Widget.http.get(link, {
- headers: {
- "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
- "Referer": "https://www.iqiyi.com/"
- }
- });
-
- var html = response.data;
- var $ = Widget.html.load(html);
- 
- // 获取视频信息
- var title = $("title").text().trim();
- var description = $("meta[name=description]").attr("content") || "";
- var imageUrl = $("meta[property=og:image]").attr("content") || "";
- 
- // 尝试获取视频播放地址
- var videoUrl = "";
- 
- // 尝试从页面获取播放地址
- var playerUrl = html.match(/"playerUrl"\s*:\s*"([^"]+)"/);
- if (playerUrl) {
- videoUrl = playerUrl[1];
- }
- 
- return {
- id: link,
- type: "url",
- title: title,
- description: description,
- posterPath: imageUrl,
- link: link,
- videoUrl: videoUrl,
- playerType: "app"
- };
- } catch (e) {
  return {
  id: link,
  type: "url",
  link: link
  };
- }
 }
