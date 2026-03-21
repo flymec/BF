@@ -50,6 +50,24 @@ WidgetMetadata = {
  ]
 };
 
+// 视频解析接口列表
+var videoParseList = [
+ "https://jiexi.789jiexi.icu:4433/?url=",
+ "https://jx.playerjy.com/?url=",
+ "https://jx.hls.one/?url=",
+ "https://jx.2s0.cn/player/?url=",
+ "https://bd.jx.cn/?url=",
+ "https://www.pouyun.com/?url=",
+ "https://jx.973973.xyz/?url=",
+ "https://jx.xmflv.com/?url=",
+ "https://www.ckplayer.vip/jiexi/?url=",
+ "https://jx.nnxv.cn/tv.php?url=",
+];
+
+function getParseUrl(originalUrl) {
+ // 使用第一个可用的解析接口
+ return videoParseList[0] + encodeURIComponent(originalUrl);
+}
 
 async function search(params) {
  var keyword = params.keyword || "";
@@ -210,69 +228,14 @@ async function getVarietyHot(params) {
 }
 
 async function loadDetail(link) {
- try {
- var tvId = "";
- var albumId = "";
- 
- // 从链接中提取ID
- var tvIdMatch = link.match(/tv_([^.]+)\.html/);
- var albumIdMatch = link.match(/album_([^.]+)\.html/);
- var vIdMatch = link.match(/v_([^.]+)\.html/);
- 
- if (tvIdMatch) {
- tvId = tvIdMatch[1];
- } else if (albumIdMatch) {
- albumId = albumIdMatch[1];
- } else if (vIdMatch) {
- tvId = vIdMatch[1];
- }
- 
- // 尝试获取视频播放地址
- var videoUrl = "";
- 
- if (tvId || albumId) {
- // 使用爱奇艺播放接口
- var playApiUrl = "https://cache.video.iqiyi.com/jp/vi/" + (tvId || albumId) + "/";
- 
- try {
- var playResponse = await Widget.http.get(playApiUrl, {
- headers: {
- "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
- "Referer": "https://www.iqiyi.com/"
- }
- });
- 
- var playData = playResponse.data;
- if (playData && playData.vu) {
- videoUrl = playData.vu;
- }
- } catch(e) {
- console.log("解析视频失败:", e.message);
- }
- }
- 
- // 如果解析不到视频地址，返回链接
- if (!videoUrl) {
- return {
- id: link,
- type: "url",
- link: link,
- videoUrl: videoUrl
- };
- }
+ // 使用解析接口获取真实视频地址
+ var parseUrl = getParseUrl(link);
  
  return {
  id: link,
  type: "url",
+ videoUrl: parseUrl,
  link: link,
- videoUrl: videoUrl,
  playerType: "system"
  };
- } catch (e) {
- return {
- id: link,
- type: "url",
- link: link
- };
- }
 }
