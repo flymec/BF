@@ -21,12 +21,6 @@ var WidgetMetadata = {
                     title: "关键词",
                     type: "input",
                     value: ""
-                },
-                {
-                    name: "page",
-                    title: "页码",
-                    type: "page",
-                    value: 1
                 }
             ]
         },
@@ -41,26 +35,6 @@ var WidgetMetadata = {
                     type: "enumeration",
                     value: "tv",
                     enumOptions: [
-                        { title: "电视剧", value: "tv" },
-                        { title: "电影", value: "movie" },
-                        { title: "综艺", value: "variety" },
-                        { title: "动漫", value: "anime" }
-                    ]
-                }
-            ]
-        },
-        {
-            title: "风云榜",
-            functionName: "getRanking",
-            cacheDuration: 3600,
-            params: [
-                {
-                    name: "category",
-                    title: "榜单类型",
-                    type: "enumeration",
-                    value: "total",
-                    enumOptions: [
-                        { title: "总榜", value: "total" },
                         { title: "电视剧", value: "tv" },
                         { title: "电影", value: "movie" },
                         { title: "综艺", value: "variety" },
@@ -88,136 +62,61 @@ var CHANNEL_MAP = {
     tv: "1",
     movie: "2",
     variety: "3",
-    anime: "5",
-    cartoon: "5"
+    anime: "5"
 };
 
 async function searchVideo(params) {
     var keyword = params.keyword || "";
-    var page = params.page || 1;
-    var retNum = 20;
-
     if (!keyword) {
         throw new Error("请输入搜索关键词");
     }
 
-    var searchUrl = "https://pcw-api.iqiyi.com/search/recommend/list"
-        + "?page_id=" + page
-        + "&ret_num=" + retNum
+    var url = "https://pcw-api.iqiyi.com/search/recommend/list"
+        + "?page_id=1"
+        + "&ret_num=20"
         + "&channel_id=1"
         + "&mode=24"
         + "&data_type=1"
         + "&keyword=" + encodeURIComponent(keyword);
 
-    var response = await Widget.http.get(searchUrl, {
-        headers: {
-            "User-Agent": "Mozilla/5.0",
-            "Referer": "https://www.iqiyi.com/"
-        }
-    });
+    var response = await Widget.http.get(url);
+    var list = response?.data?.data?.list || [];
 
-    var data = response.data;
-    if (!data || !data.data || !data.data.list) {
-        return [];
-    }
-
-    var list = data.data.list;
-    var results = [];
-
-    for (var i = 0; i < list.length; i++) {
-        var item = list[i];
+    return list.map(function(item) {
         var albumId = item.albumId || "";
-        var tvId = item.tvId || "";
-        var title = item.title || item.name || "";
-        var description = item.description || item.abstract || "";
-        var imageUrl = item.imageUrl || item.picUrl || "";
-
-        var link = albumId ? "https://www.iqiyi.com/a_" + albumId + ".html" : "";
-
-        if (imageUrl) {
-            imageUrl = imageUrl.replace("http://", "https://");
-        }
-
-        if (title) {
-            results.push({
-                id: albumId || tvId || Math.random().toString(36),
-                type: "url",
-                title: title,
-                description: description,
-                posterPath: imageUrl,
-                link: link,
-                albumId: albumId,
-                tvId: tvId
-            });
-        }
-    }
-
-    return results;
+        return {
+            id: albumId || Math.random().toString(36),
+            type: "url",
+            title: item.title || item.name || "",
+            description: item.description || "",
+            posterPath: (item.imageUrl || item.picUrl || "").replace("http://", "https://"),
+            link: albumId ? "https://www.iqiyi.com/a_" + albumId + ".html" : ""
+        };
+    });
 }
 
 async function getHot(params) {
     var category = params.category || "tv";
     var channelId = CHANNEL_MAP[category] || "1";
 
-    var apiUrl = "https://mesh.if.iqiyi.com/portal/lw/videolib/data"
+    var url = "https://mesh.if.iqiyi.com/portal/lw/videolib/data"
         + "?ret_num=30"
         + "&channel_id=" + channelId
         + "&page_id=1";
 
-    var response = await Widget.http.get(apiUrl, {
-        headers: {
-            "User-Agent": "Mozilla/5.0",
-            "Referer": "https://www.iqiyi.com/"
-        }
-    });
+    var response = await Widget.http.get(url);
+    var list = response?.data?.data?.list || [];
 
-    var data = response.data;
-    if (!data || !data.data || !data.data.list) {
-        return [];
-    }
-
-    var list = data.data.list;
-    var results = [];
-
-    for (var i = 0; i < list.length; i++) {
-        var item = list[i];
+    return list.map(function(item) {
         var albumId = item.albumId || "";
-        var tvId = item.tvId || "";
-        var title = item.title || item.name || "";
-        var imageUrl = item.imageUrl || item.picUrl || "";
-        var score = item.score || "";
-
-        var link = albumId ? "https://www.iqiyi.com/a_" + albumId + ".html" : "";
-
-        if (imageUrl) {
-            imageUrl = imageUrl.replace("http://", "https://");
-        }
-
-        if (title) {
-            results.push({
-                id: albumId || tvId || Math.random().toString(36),
-                type: "url",
-                title: title,
-                posterPath: imageUrl,
-                rating: score,
-                link: link,
-                albumId: albumId,
-                tvId: tvId,
-                mediaType: category === "movie" ? "movie" : "tv"
-            });
-        }
-    }
-
-    return results;
-}
-
-async function getRanking(params) {
-    var category = params.category || "total";
-    var hotData = await getHot({ category: category === "total" ? "tv" : category });
-
-    for (var i = 0; i < hotData.length; i++) {
-        hotData[i].ranking = i + 1;
-    }
-
-    return hotData;
+        return {
+            id: albumId || item.tvId || Math.random().toString(36),
+            type: "url",
+            title: item.title || item.name || "",
+            posterPath: (item.imageUrl || item.picUrl || "").replace("http://", "https://"),
+            rating: item.score || "",
+            link: albumId ? "https://www.iqiyi.com/a_" + albumId + ".html" : "",
+            mediaType: category === "movie" ? "movie" : "tv"
+        };
+    });
 }
