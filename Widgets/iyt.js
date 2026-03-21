@@ -24,24 +24,28 @@ WidgetMetadata = {
  ]
  },
  {
- title: "热播",
- description: "热播推荐",
+ title: "电视剧热播",
+ description: "电视剧热播",
  requiresWebView: false,
- functionName: "hot",
+ functionName: "getTvHot",
  cacheDuration: 1800,
- params: [
+ params: []
+ },
  {
- name: "category",
- title: "分类",
- type: "enumeration",
- description: "分类",
- value: "tv",
- enumOptions: [
- { title: "电视剧", value: "tv" },
- { title: "电影", value: "movie" }
- ]
- }
- ]
+ title: "电影热播",
+ description: "电影热播",
+ requiresWebView: false,
+ functionName: "getMovieHot",
+ cacheDuration: 1800,
+ params: []
+ },
+ {
+ title: "综艺热播",
+ description: "综艺热播",
+ requiresWebView: false,
+ functionName: "getVarietyHot",
+ cacheDuration: 1800,
+ params: []
  }
  ]
 };
@@ -70,23 +74,110 @@ async function search(params) {
  });
 }
 
-async function hot(params) {
- var category = params.category || "tv";
- var channelId = category === "movie" ? "2" : "1";
+async function getTvHot(params) {
+ var url = "https://www.iqiyi.com/list/%E7%94%B5%E8%A7%86%E5%89%A7.html";
 
- var url = "https://mesh.if.iqiyi.com/portal/lw/videolib/data?ret_num=30&channel_id=" + channelId + "&page_id=1";
-
- var response = await Widget.http.get(url);
- var list = response.data.data.list || [];
-
- return list.map(function(item) {
- var albumId = item.albumId || "";
- return {
- id: albumId || item.tvId || Math.random().toString(36),
- type: "url",
- title: item.title || "",
- posterPath: item.imageUrl || "",
- link: albumId ? "https://www.iqiyi.com/a_" + albumId + ".html" : ""
- };
+ var response = await Widget.http.get(url, {
+ headers: {
+ "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+ "Referer": "https://www.iqiyi.com/"
+ }
  });
+
+ var html = response.data;
+ var $ = Widget.html.load(html);
+ var results = [];
+
+ $(".qy-mod-li").each(function() {
+ var $this = $(this);
+ var title = $this.attr("title") || $this.find(".qy-mod-li-tit").text().trim();
+ var link = $this.find("a").attr("href") || "";
+ var img = $this.find("img").attr("src") || "";
+ var albumId = link.match(/album_([^.]+)\.html/);
+ albumId = albumId ? albumId[1] : "";
+
+ if (title && link) {
+ results.push({
+ id: albumId || Math.random().toString(36),
+ type: "url",
+ title: title,
+ posterPath: img,
+ link: link
+ });
+ }
+ });
+
+ return results.slice(0, 30);
+}
+
+async function getMovieHot(params) {
+ var url = "https://www.iqiyi.com/list/%E7%94%B5%E5%BD%B1%E7%94%B5%E8%A7%86.html";
+
+ var response = await Widget.http.get(url, {
+ headers: {
+ "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+ "Referer": "https://www.iqiyi.com/"
+ }
+ });
+
+ var html = response.data;
+ var $ = Widget.html.load(html);
+ var results = [];
+
+ $(".qy-mod-li").each(function() {
+ var $this = $(this);
+ var title = $this.attr("title") || $this.find(".qy-mod-li-tit").text().trim();
+ var link = $this.find("a").attr("href") || "";
+ var img = $this.find("img").attr("src") || "";
+ var albumId = link.match(/album_([^.]+)\.html/);
+ albumId = albumId ? albumId[1] : "";
+
+ if (title && link) {
+ results.push({
+ id: albumId || Math.random().toString(36),
+ type: "url",
+ title: title,
+ posterPath: img,
+ link: link
+ });
+ }
+ });
+
+ return results.slice(0, 30);
+}
+
+async function getVarietyHot(params) {
+ var url = "https://www.iqiyi.com/list/%E7%BB%BC%E8%89%BA%E7%94%B5%E8%A7%86.html";
+
+ var response = await Widget.http.get(url, {
+ headers: {
+ "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+ "Referer": "https://www.iqiyi.com/"
+ }
+ });
+
+ var html = response.data;
+ var $ = Widget.html.load(html);
+ var results = [];
+
+ $(".qy-mod-li").each(function() {
+ var $this = $(this);
+ var title = $this.attr("title") || $this.find(".qy-mod-li-tit").text().trim();
+ var link = $this.find("a").attr("href") || "";
+ var img = $this.find("img").attr("src") || "";
+ var albumId = link.match(/album_([^.]+)\.html/);
+ albumId = albumId ? albumId[1] : "";
+
+ if (title && link) {
+ results.push({
+ id: albumId || Math.random().toString(36),
+ type: "url",
+ title: title,
+ posterPath: img,
+ link: link
+ });
+ }
+ });
+
+ return results.slice(0, 30);
 }
