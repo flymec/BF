@@ -4,7 +4,7 @@ WidgetMetadata = {
  description: "爱奇艺视频搜索与热播推荐",
  author: "Forward",
  site: "https://www.iqiyi.com",
- version: "1.0.0",
+ version: "1.0.1",
  requiredVersion: "0.0.1",
  detailCacheDuration: 60,
  modules: [
