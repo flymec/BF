@@ -68,21 +68,26 @@ async function search(params) {
  var videoId = item.videoId || "";
  
  var link = "";
+ var idValue = "";
  if (albumId) {
  link = "https://www.iqiyi.com/a_" + albumId + ".html";
+ idValue = albumId;
  } else if (tvId) {
  link = "https://www.iqiyi.com/v_" + tvId + ".html";
+ idValue = tvId;
  } else if (videoId) {
  link = "https://www.iqiyi.com/v_" + videoId + ".html";
+ idValue = videoId;
  }
  
  return {
- id: albumId || tvId || videoId || Math.random().toString(36),
+ id: idValue || Math.random().toString(36),
  type: "url",
  title: item.title || "",
  description: item.description || "",
  posterPath: item.imageUrl || item.picUrl || "",
- link: link
+ link: link,
+ tvId: tvId || videoId || ""
  };
  });
 }
@@ -108,14 +113,17 @@ async function getTvHot(params) {
  var img = $this.find("img").attr("src") || "";
  var albumId = link.match(/album_([^.]+)\.html/);
  albumId = albumId ? albumId[1] : "";
+ var tvIdMatch = link.match(/tv_([^.]+)\.html/);
+ var tvId = tvIdMatch ? tvIdMatch[1] : "";
 
  if (title && link) {
  results.push({
- id: albumId || Math.random().toString(36),
+ id: albumId || tvId || Math.random().toString(36),
  type: "url",
  title: title,
  posterPath: img,
- link: link
+ link: link,
+ tvId: tvId
  });
  }
  });
@@ -144,14 +152,17 @@ async function getMovieHot(params) {
  var img = $this.find("img").attr("src") || "";
  var albumId = link.match(/album_([^.]+)\.html/);
  albumId = albumId ? albumId[1] : "";
+ var tvIdMatch = link.match(/tv_([^.]+)\.html/);
+ var tvId = tvIdMatch ? tvIdMatch[1] : "";
 
  if (title && link) {
  results.push({
- id: albumId || Math.random().toString(36),
+ id: albumId || tvId || Math.random().toString(36),
  type: "url",
  title: title,
  posterPath: img,
- link: link
+ link: link,
+ tvId: tvId
  });
  }
  });
@@ -180,14 +191,17 @@ async function getVarietyHot(params) {
  var img = $this.find("img").attr("src") || "";
  var albumId = link.match(/album_([^.]+)\.html/);
  albumId = albumId ? albumId[1] : "";
+ var tvIdMatch = link.match(/tv_([^.]+)\.html/);
+ var tvId = tvIdMatch ? tvIdMatch[1] : "";
 
  if (title && link) {
  results.push({
- id: albumId || Math.random().toString(36),
+ id: albumId || tvId || Math.random().toString(36),
  type: "url",
  title: title,
  posterPath: img,
- link: link
+ link: link,
+ tvId: tvId
  });
  }
  });
@@ -196,9 +210,69 @@ async function getVarietyHot(params) {
 }
 
 async function loadDetail(link) {
+ try {
+ var tvId = "";
+ var albumId = "";
+ 
+ // 从链接中提取ID
+ var tvIdMatch = link.match(/tv_([^.]+)\.html/);
+ var albumIdMatch = link.match(/album_([^.]+)\.html/);
+ var vIdMatch = link.match(/v_([^.]+)\.html/);
+ 
+ if (tvIdMatch) {
+ tvId = tvIdMatch[1];
+ } else if (albumIdMatch) {
+ albumId = albumIdMatch[1];
+ } else if (vIdMatch) {
+ tvId = vIdMatch[1];
+ }
+ 
+ // 尝试获取视频播放地址
+ var videoUrl = "";
+ 
+ if (tvId || albumId) {
+ // 使用爱奇艺播放接口
+ var playApiUrl = "https://cache.video.iqiyi.com/jp/vi/" + (tvId || albumId) + "/";
+ 
+ try {
+ var playResponse = await Widget.http.get(playApiUrl, {
+ headers: {
+ "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+ "Referer": "https://www.iqiyi.com/"
+ }
+ });
+ 
+ var playData = playResponse.data;
+ if (playData && playData.vu) {
+ videoUrl = playData.vu;
+ }
+ } catch(e) {
+ console.log("解析视频失败:", e.message);
+ }
+ }
+ 
+ // 如果解析不到视频地址，返回链接
+ if (!videoUrl) {
+ return {
+ id: link,
+ type: "url",
+ link: link,
+ videoUrl: videoUrl
+ };
+ }
+ 
+ return {
+ id: link,
+ type: "url",
+ link: link,
+ videoUrl: videoUrl,
+ playerType: "system"
+ };
+ } catch (e) {
  return {
  id: link,
  type: "url",
  link: link
  };
+ }
 }
