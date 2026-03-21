@@ -1,7 +1,7 @@
 var WidgetMetadata = {
   id: "fly.javrate",
   title: "JAVRate",
-  description: "JAVRate完美",
+  description: "JAVRate最新修复",
   author: "fly",
   site: "https://www.javrate.com/",
   version: "2.2.6",
