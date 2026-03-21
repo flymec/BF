@@ -1,230 +1,446 @@
+/**
+ * 爱奇艺 ForwardWidget 模块
+ * 提供爱奇艺视频搜索、热播推荐等功能
+ */
+
 var WidgetMetadata = {
-  id: "com.iqiyi.hotlist",
-  title: "爱奇艺热门推荐",
-  description: "基于爱奇艺热搜榜的各分类热门视频",
-  author: "YourName",
-  site: "https://www.iqiyi.com",
-  version: "1.0.0",
-  requiredVersion: "0.0.1",
-  detailCacheDuration: 60,
-  modules: [
-    {
-      title: "🔥 热搜榜",
-      description: "爱奇艺热搜榜热门视频",
-      requiresWebView: false,
-      functionName: "loadHotList",
-      cacheDuration: 3600,
-      params: [
+    id: "forward.iqiyi",
+    title: "爱奇艺视频",
+    description: "爱奇艺视频搜索与热播推荐",
+    author: "Forward",
+    site: "https://www.iqiyi.com",
+    version: "1.0.0",
+    requiredVersion: "0.0.1",
+    detailCacheDuration: 60,
+    modules: [
         {
-          name: "category",
-          title: "分类",
-          type: "constant",
-          value: "热搜", // 对应 hotList 中的分类标题
-        }
-      ]
-    },
-    {
-      title: "📺 热门电视剧",
-      description: "爱奇艺热门电视剧",
-      requiresWebView: false,
-      functionName: "loadHotList",
-      cacheDuration: 3600,
-      params: [
+            id: "search",
+            title: "搜索视频",
+            functionName: "search",
+            description: "搜索爱奇艺视频",
+            params: [
+                {
+                    name: "keyword",
+                    title: "关键词",
+                    type: "input",
+                    description: "输入视频名称或关键词",
+                    value: ""
+                },
+                {
+                    name: "page",
+                    title: "页码",
+                    type: "page",
+                    description: "页码",
+                    value: 1
+                }
+            ]
+        },
         {
-          name: "category",
-          title: "分类",
-          type: "constant",
-          value: "电视剧",
-        }
-      ]
-    },
-    {
-      title: "🎬 热门电影",
-      description: "爱奇艺热门电影",
-      requiresWebView: false,
-      functionName: "loadHotList",
-      cacheDuration: 3600,
-      params: [
+            id: "hot",
+            title: "热播推荐",
+            functionName: "hot",
+            description: "获取爱奇艺热播内容",
+            params: [
+                {
+                    name: "category",
+                    title: "分类",
+                    type: "enumeration",
+                    description: "选择内容分类",
+                    value: "tv",
+                    enumOptions: [
+                        { title: "电视剧", value: "tv" },
+                        { title: "电影", value: "movie" },
+                        { title: "综艺", value: "variety" },
+                        { title: "动漫", value: "anime" }
+                    ]
+                },
+                {
+                    name: "type",
+                    title: "类型",
+                    type: "enumeration",
+                    description: "热播类型",
+                    value: "hot",
+                    enumOptions: [
+                        { title: "热播", value: "hot" },
+                        { title: "最新", value: "latest" },
+                        { title: "推荐", value: "recommend" }
+                    ]
+                }
+            ]
+        },
         {
-          name: "category",
-          title: "分类",
-          type: "constant",
-          value: "电影",
-        }
-      ]
-    },
-    {
-      title: "🎤 热门综艺",
-      description: "爱奇艺热门综艺",
-      requiresWebView: false,
-      functionName: "loadHotList",
-      cacheDuration: 3600,
-      params: [
+            id: "ranking",
+            title: "风云榜",
+            functionName: "ranking",
+            description: "获取爱奇艺风云榜数据",
+            params: [
+                {
+                    name: "category",
+                    title: "榜单类型",
+                    type: "enumeration",
+                    description: "选择榜单类型",
+                    value: "total",
+                    enumOptions: [
+                        { title: "总榜", value: "total" },
+                        { title: "电视剧", value: "tv" },
+                        { title: "电影", value: "movie" },
+                        { title: "综艺", value: "variety" },
+                        { title: "动漫", value: "anime" }
+                    ]
+                }
+            ]
+        },
         {
-          name: "category",
-          title: "分类",
-          type: "constant",
-          value: "综艺",
+            id: "detail",
+            title: "视频详情",
+            functionName: "detail",
+            description: "获取视频详情",
+            params: [
+                {
+                    name: "albumId",
+                    title: "专辑ID",
+                    type: "input",
+                    description: "爱奇艺专辑ID (album_id)",
+                    value: ""
+                },
+                {
+                    name: "tvId",
+                    title: "视频ID",
+                    type: "input",
+                    description: "爱奇艺视频ID (tv_id)",
+                    value: ""
+                }
+            ]
         }
-      ]
-    },
-    {
-      title: "📱 热门短剧",
-      description: "爱奇艺热门短剧",
-      requiresWebView: false,
-      functionName: "loadHotList",
-      cacheDuration: 3600,
-      params: [
-        {
-          name: "category",
-          title: "分类",
-          type: "constant",
-          value: "短剧",
-        }
-      ]
-    },
-    {
-      title: "🆓 热门免费",
-      description: "爱奇艺热门免费视频",
-      requiresWebView: false,
-      functionName: "loadHotList",
-      cacheDuration: 3600,
-      params: [
-        {
-          name: "category",
-          title: "分类",
-          type: "constant",
-          value: "免费",
-        }
-      ]
+    ],
+    search: {
+        title: "搜索爱奇艺",
+        functionName: "search",
+        params: [
+            {
+                name: "keyword",
+                title: "关键词",
+                type: "input",
+                description: "输入视频名称或关键词",
+                value: ""
+            }
+        ]
     }
-  ]
 };
 
-const IQIYI_LOG_PREFIX = "Widget: iQiyi HotList -";
-const IQIYI_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+// 频道ID映射
+var CHANNEL_MAP = {
+    tv: "1",      // 电视剧
+    movie: "2",   // 电影
+    variety: "3",  // 综艺
+    anime: "5",    // 动漫
+    cartoon: "5"   // 动漫别名
+};
 
-// hotList 接口地址（您已验证有效的）
-const HOTLIST_API = "https://mesh.if.iqiyi.com/portal/lw/search/keywords/hotList?device_id=b4355997ee51ca6f8963fc194f7cb9c3&v=17.033.24824&appMode=&src=";
+// 搜索视频
+async function search(params) {
+    var keyword = params.keyword || "";
+    var page = params.page || 1;
+    var retNum = 20;
 
-// 从 playUrl 中提取 albumid
-function extractAlbumId(playUrl) {
-  if (!playUrl) return null;
-  const match = playUrl.match(/albumid=(\d+)/);
-  return match ? match[1] : null;
-}
+    if (!keyword) {
+        throw new Error("请输入搜索关键词");
+    }
 
-// 构建详情页链接（优先使用 albumid，其次使用 docId）
-function buildDetailLink(item) {
-  const albumId = extractAlbumId(item.playUrl);
-  if (albumId) {
-    return `https://www.iqiyi.com/a_${albumId}.html`;
-  }
-  if (item.docId) {
-    return `https://www.iqiyi.com/play?docId=${item.docId}`;
-  }
-  // 最后备选：使用 qipuId 构造（不一定有效）
-  if (item.qipuId) {
-    return `https://www.iqiyi.com/lib/${item.qipuId}.html`;
-  }
-  return null;
-}
+    console.log("搜索关键词:", keyword, "页码:", page);
 
-// 解析单个视频项为标准格式
-function parseVideoItem(item, categoryName) {
-  if (!item || !item.title) return null;
+    var searchUrl = "https://pcw-api.iqiyi.com/search/recommend/list" +
+        "?page_id=" + page +
+        "&ret_num=" + retNum +
+        "&channel_id=1" +
+        "&mode=24" +
+        "&data_type=1" +
+        "&keyword=" + encodeURIComponent(keyword);
 
-  const link = buildDetailLink(item);
-  if (!link) {
-    console.log(`${IQIYI_LOG_PREFIX} 无法构建链接: ${item.title}`);
-    return null;
-  }
+    console.log("搜索URL:", searchUrl);
 
-  // 处理封面图（确保完整https）
-  let imgSrc = item.image || '';
-  if (imgSrc && !imgSrc.startsWith('http')) {
-    imgSrc = 'https:' + imgSrc;
-  }
-
-  // 构建描述信息
-  let description = item.tag || '';
-  if (item.metaTags && Array.isArray(item.metaTags)) {
-    const tags = item.metaTags.map(t => t.name).filter(Boolean).join(' · ');
-    if (tags) description = description ? `${description} | ${tags}` : tags;
-  }
-
-  return {
-    id: `${categoryName}_${item.qipuId || item.docId || Date.now()}`,
-    type: "url",
-    title: item.title,
-    imgSrc: imgSrc,
-    backdropPath: imgSrc,
-    link: link,                 // 详情页链接
-    description: description || `爱奇艺热门${categoryName}`,
-    mediaType: "movie",
-  };
-}
-
-// 核心函数：加载 hotList 并过滤指定分类
-async function loadHotList(params) {
-  const targetCategory = params.category || "热搜";  // 默认热搜
-
-  try {
-    const response = await Widget.http.get(HOTLIST_API, {
-      headers: {
-        "User-Agent": IQIYI_USER_AGENT,
-        "Referer": "https://www.iqiyi.com/",
-      }
+    var response = await Widget.http.get(searchUrl, {
+        headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://www.iqiyi.com/",
+            "Accept": "application/json, text/plain, */*"
+        }
     });
 
-    if (!response?.data) {
-      throw new Error("无法获取 hotList 数据");
+    var data = response.data;
+    console.log("搜索响应:", JSON.stringify(data).slice(0, 500));
+
+    if (!data || !data.data || !data.data.list) {
+        // 尝试备用搜索方式
+        return await searchBackup(keyword, page, retNum);
     }
 
-    let data = response.data;
-    if (typeof data === 'string') {
-      data = JSON.parse(data);
-    }
-
-    // 在 data.hotQuery 数组中查找指定分类
-    const categories = data.hotQuery || [];
-    const target = categories.find(cat => cat.title === targetCategory);
-
-    if (!target || !Array.isArray(target.items)) {
-      console.warn(`${IQIYI_LOG_PREFIX} 未找到分类 "${targetCategory}" 或该分类下无数据`);
-      return [];
-    }
-
-    // 解析该分类下的所有视频项
-    const items = target.items
-      .map(item => parseVideoItem(item, targetCategory))
-      .filter(item => item !== null);
-
-    return items;
-  } catch (error) {
-    console.error(`${IQIYI_LOG_PREFIX} 加载失败: ${error.message}`);
-    throw error;
-  }
+    return formatSearchResult(data.data.list, keyword);
 }
 
-// 详情函数：返回视频播放地址（因爱奇艺播放地址复杂，此处返回详情页链接，让外部播放器尝试）
-async function loadDetail(link) {
-  // 由于无法直接获取真实视频流，我们返回详情页链接。
-  // 某些播放器可能支持加载网页，但通常无法直接播放。
-  // 您可以尝试在此处实现更复杂的播放地址解析，但需要额外的抓包工作。
-  return {
-    id: link,
-    type: "url",
-    videoUrl: link,  // 将详情页链接作为视频地址返回，期望外部播放器能够处理（可能失败）
-    customHeaders: {
-      "User-Agent": IQIYI_USER_AGENT,
-      "Referer": "https://www.iqiyi.com/",
-    }
-  };
+// 备用搜索方式
+async function searchBackup(keyword, page, retNum) {
+    var searchUrl = "https://so.iqiyi.com/so/q_" + encodeURIComponent(keyword) + "_c_" + page;
+
+    console.log("备用搜索URL:", searchUrl);
+
+    var response = await Widget.http.get(searchUrl, {
+        headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://www.iqiyi.com/",
+            "Accept": "text/html,application/xhtml+xml"
+        }
+    });
+
+    // 解析HTML响应
+    var html = response.data;
+    var $ = Widget.html.load(html);
+
+    var results = [];
+    $(".qy-mod-li, .qy-mod-li-link").each(function() {
+        var $this = $(this);
+        var title = $this.attr("title") || $this.text().trim();
+        var href = $this.attr("href") || "";
+
+        // 提取专辑ID
+        var albumIdMatch = href.match(/album_id[=:]([^&]+)/i) || href.match(/a_([^.]+)\.html/);
+        var albumId = albumIdMatch ? albumIdMatch[1] : "";
+
+        // 提取tvId
+        var tvIdMatch = href.match(/tv_id[=:]([^&]+)/i) || href.match(/v_([^.]+)\.html/);
+        var tvId = tvIdMatch ? tvIdMatch[1] : "";
+
+        if (title && href) {
+            results.push({
+                id: albumId || tvId || Math.random().toString(36),
+                type: "url",
+                title: title.substring(0, 100),
+                link: href,
+                albumId: albumId,
+                tvId: tvId
+            });
+        }
+    });
+
+    console.log("备用搜索结果数:", results.length);
+    return results.slice(0, retNum);
 }
 
-// 为了兼容旧版调用方式，保留 search 函数（此处简单返回空）
-async function search(params) {
-  console.warn(`${IQIYI_LOG_PREFIX} 搜索功能暂未实现`);
-  return [];
+// 格式化搜索结果
+function formatSearchResult(list, keyword) {
+    var results = [];
+
+    for (var i = 0; i < list.length; i++) {
+        var item = list[i];
+        var albumId = item.albumId || "";
+        var tvId = item.tvId || "";
+        var videoId = item.videoId || "";
+        var title = item.title || item.name || "";
+        var description = item.description || item.abstract || "";
+        var imageUrl = item.imageUrl || item.picUrl || item.pic || "";
+        var duration = item.duration || item.timeLength || "";
+
+        // 构建视频链接
+        var link = "";
+        if (albumId) {
+            link = "https://www.iqiyi.com/a_" + albumId + ".html";
+        } else if (tvId) {
+            link = "https://www.iqiyi.com/v_" + tvId + ".html";
+        }
+
+        // 转换图片URL
+        if (imageUrl) {
+            imageUrl = imageUrl.replace("http://", "https://");
+        }
+
+        if (title) {
+            results.push({
+                id: albumId || tvId || videoId || Math.random().toString(36),
+                type: "url",
+                title: title.substring(0, 100),
+                description: description.substring(0, 200),
+                posterPath: imageUrl,
+                duration: duration,
+                link: link,
+                albumId: albumId,
+                tvId: tvId,
+                videoId: videoId,
+                source: "iqiyi"
+            });
+        }
+    }
+
+    console.log("格式化搜索结果数:", results.length);
+    return results;
+}
+
+// 获取热播内容
+async function hot(params) {
+    var category = params.category || "tv";
+    var type = params.type || "hot";
+
+    var channelId = CHANNEL_MAP[category] || "1";
+
+    console.log("获取热播内容 - 分类:", category, "类型:", type, "频道ID:", channelId);
+
+    // 使用爱奇艺 mesh API 获取视频库数据
+    var apiUrl = "https://mesh.if.iqiyi.com/portal/lw/videolib/data" +
+        "?ret_num=30" +
+        "&channel_id=" + channelId +
+        "&page_id=1" +
+        "&mode=" + (type === "hot" ? "24" : "11");
+
+    console.log("热播API URL:", apiUrl);
+
+    var response = await Widget.http.get(apiUrl, {
+        headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://www.iqiyi.com/",
+            "Accept": "application/json, text/plain, */*"
+        }
+    });
+
+    var data = response.data;
+    console.log("热播数据响应:", JSON.stringify(data).slice(0, 500));
+
+    if (!data || !data.data || !data.data.list) {
+        return [];
+    }
+
+    return formatHotResult(data.data.list, category);
+}
+
+// 格式化热播结果
+function formatHotResult(list, category) {
+    var results = [];
+
+    for (var i = 0; i < list.length; i++) {
+        var item = list[i];
+        var albumId = item.albumId || "";
+        var tvId = item.tvId || "";
+        var title = item.title || item.name || "";
+        var imageUrl = item.imageUrl || item.picUrl || item.pic || "";
+        var description = item.description || item.abstract || "";
+        var score = item.score || item.rating || "";
+
+        // 确定媒体类型
+        var mediaType = "tv";
+        if (category === "movie") {
+            mediaType = "movie";
+        } else if (category === "variety") {
+            mediaType = "tv";
+        } else if (category === "anime") {
+            mediaType = "tv";
+        }
+
+        // 构建链接
+        var link = "";
+        if (albumId) {
+            link = "https://www.iqiyi.com/a_" + albumId + ".html";
+        } else if (tvId) {
+            link = "https://www.iqiyi.com/v_" + tvId + ".html";
+        }
+
+        // 转换图片URL
+        if (imageUrl) {
+            imageUrl = imageUrl.replace("http://", "https://");
+        }
+
+        if (title) {
+            results.push({
+                id: albumId || tvId || Math.random().toString(36),
+                type: "url",
+                title: title,
+                description: description,
+                posterPath: imageUrl,
+                rating: score,
+                mediaType: mediaType,
+                link: link,
+                albumId: albumId,
+                tvId: tvId,
+                source: "iqiyi"
+            });
+        }
+    }
+
+    console.log("热播结果数:", results.length);
+    return results;
+}
+
+// 获取风云榜
+async function ranking(params) {
+    var category = params.category || "total";
+
+    console.log("获取风云榜 - 分类:", category);
+
+    // 风云榜API - 使用不同的频道ID
+    var channelId = CHANNEL_MAP[category] || "1";
+
+    // 获取热播内容作为榜单数据
+    var hotData = await hot({ category: category, type: "hot" });
+
+    // 添加排名信息
+    for (var i = 0; i < hotData.length; i++) {
+        hotData[i].ranking = i + 1;
+    }
+
+    console.log("榜单结果数:", hotData.length);
+    return hotData;
+}
+
+// 获取视频详情
+async function detail(params) {
+    var albumId = params.albumId || "";
+    var tvId = params.tvId || "";
+
+    if (!albumId && !tvId) {
+        throw new Error("请提供 albumId 或 tvId");
+    }
+
+    console.log("获取视频详情 - albumId:", albumId, "tvId:", tvId);
+
+    var link = "";
+    if (albumId) {
+        link = "https://www.iqiyi.com/a_" + albumId + ".html";
+    } else {
+        link = "https://www.iqiyi.com/v_" + tvId + ".html";
+    }
+
+    // 尝试获取详情页
+    var response = await Widget.http.get(link, {
+        headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://www.iqiyi.com/",
+            "Accept": "text/html,application/xhtml+xml"
+        }
+    });
+
+    var html = response.data;
+    var $ = Widget.html.load(html);
+
+    var title = $("title").text().trim() || "";
+    var description = $("meta[name=description]").attr("content") || "";
+    var imageUrl = $("meta[property=og:image]").attr("content") || "";
+
+    // 提取评分
+    var scoreMatch = html.match(/"score":\s*([\d.]+)/);
+    var score = scoreMatch ? scoreMatch[1] : "";
+
+    // 提取年份
+    var yearMatch = html.match(/(\d{4})/);
+    var year = yearMatch ? yearMatch[1] : "";
+
+    return {
+        id: albumId || tvId || Math.random().toString(36),
+        type: "url",
+        title: title.split("_")[0] || title.split("-")[0],
+        description: description,
+        posterPath: imageUrl,
+        rating: score,
+        releaseDate: year,
+        link: link,
+        albumId: albumId,
+        tvId: tvId,
+        source: "iqiyi"
+    };
 }
