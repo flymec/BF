@@ -2,7 +2,7 @@
  * 爱奇艺 ForwardWidget
  */
 
-WidgetMetadata = {
+var WidgetMetadata = {
     id: "forward.iqiyi",
     title: "爱奇艺视频",
     version: "1.0.0",
@@ -15,6 +15,7 @@ WidgetMetadata = {
             id: "search",
             title: "搜索视频",
             functionName: "searchVideo",
+            cacheDuration: 3600,
             params: [
                 {
                     name: "keyword",
@@ -35,6 +36,7 @@ WidgetMetadata = {
             id: "hot",
             title: "热播推荐",
             functionName: "getHot",
+            cacheDuration: 1800,
             params: [
                 {
                     name: "category",
@@ -54,6 +56,7 @@ WidgetMetadata = {
             id: "ranking",
             title: "风云榜",
             functionName: "getRanking",
+            cacheDuration: 3600,
             params: [
                 {
                     name: "category",
