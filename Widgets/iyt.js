@@ -12,7 +12,6 @@ var WidgetMetadata = {
     site: "https://www.iqiyi.com",
     modules: [
         {
-            id: "search",
             title: "搜索视频",
             functionName: "searchVideo",
             cacheDuration: 3600,
@@ -21,7 +20,6 @@ var WidgetMetadata = {
                     name: "keyword",
                     title: "关键词",
                     type: "input",
-                    description: "输入视频名称或关键词",
                     value: ""
                 },
                 {
@@ -33,7 +31,6 @@ var WidgetMetadata = {
             ]
         },
         {
-            id: "hot",
             title: "热播推荐",
             functionName: "getHot",
             cacheDuration: 1800,
@@ -53,7 +50,6 @@ var WidgetMetadata = {
             ]
         },
         {
-            id: "ranking",
             title: "风云榜",
             functionName: "getRanking",
             cacheDuration: 3600,
@@ -88,7 +84,6 @@ var WidgetMetadata = {
     }
 };
 
-// 频道ID映射
 var CHANNEL_MAP = {
     tv: "1",
     movie: "2",
@@ -97,7 +92,6 @@ var CHANNEL_MAP = {
     cartoon: "5"
 };
 
-// 搜索视频
 async function searchVideo(params) {
     var keyword = params.keyword || "";
     var page = params.page || 1;
@@ -107,25 +101,22 @@ async function searchVideo(params) {
         throw new Error("请输入搜索关键词");
     }
 
-    console.log("搜索:", keyword, "页:", page);
-
-    var searchUrl = "https://pcw-api.iqiyi.com/search/recommend/list" +
-        "?page_id=" + page +
-        "&ret_num=" + retNum +
-        "&channel_id=1" +
-        "&mode=24" +
-        "&data_type=1" +
-        "&keyword=" + encodeURIComponent(keyword);
+    var searchUrl = "https://pcw-api.iqiyi.com/search/recommend/list"
+        + "?page_id=" + page
+        + "&ret_num=" + retNum
+        + "&channel_id=1"
+        + "&mode=24"
+        + "&data_type=1"
+        + "&keyword=" + encodeURIComponent(keyword);
 
     var response = await Widget.http.get(searchUrl, {
         headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "User-Agent": "Mozilla/5.0",
             "Referer": "https://www.iqiyi.com/"
         }
     });
 
     var data = response.data;
-
     if (!data || !data.data || !data.data.list) {
         return [];
     }
@@ -164,27 +155,23 @@ async function searchVideo(params) {
     return results;
 }
 
-// 获取热播内容
 async function getHot(params) {
     var category = params.category || "tv";
     var channelId = CHANNEL_MAP[category] || "1";
 
-    console.log("获取热播:", category);
-
-    var apiUrl = "https://mesh.if.iqiyi.com/portal/lw/videolib/data" +
-        "?ret_num=30" +
-        "&channel_id=" + channelId +
-        "&page_id=1";
+    var apiUrl = "https://mesh.if.iqiyi.com/portal/lw/videolib/data"
+        + "?ret_num=30"
+        + "&channel_id=" + channelId
+        + "&page_id=1";
 
     var response = await Widget.http.get(apiUrl, {
         headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "User-Agent": "Mozilla/5.0",
             "Referer": "https://www.iqiyi.com/"
         }
     });
 
     var data = response.data;
-
     if (!data || !data.data || !data.data.list) {
         return [];
     }
@@ -224,12 +211,8 @@ async function getHot(params) {
     return results;
 }
 
-// 获取风云榜
 async function getRanking(params) {
     var category = params.category || "total";
-
-    console.log("获取榜单:", category);
-
     var hotData = await getHot({ category: category === "total" ? "tv" : category });
 
     for (var i = 0; i < hotData.length; i++) {
