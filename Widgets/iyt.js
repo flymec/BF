@@ -1,9 +1,9 @@
 WidgetMetadata = {
  id: "forward.iqiyi",
- title: "爱奇艺视频",
- description: "爱奇艺视频搜索与热播推荐",
+ title: "视频",
+ description: "视频搜索与热播推荐",
  author: "Forward",
- site: "https://www.iqiyi.com",
+ site: "https://m",
  version: "1.0.0",
  requiredVersion: "0.0.1",
  detailCacheDuration: 60,
