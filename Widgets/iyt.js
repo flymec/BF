@@ -1,32 +1,40 @@
-var WidgetMetadata = {
+WidgetMetadata = {
  id: "forward.iqiyi",
  title: "爱奇艺视频",
- version: "1.0.0",
- requiredVersion: "0.0.1",
  description: "爱奇艺视频搜索与热播推荐",
  author: "Forward",
  site: "https://www.iqiyi.com",
+ version: "1.0.0",
+ requiredVersion: "0.0.1",
+ detailCacheDuration: 60,
  modules: [
  {
- title: "搜索视频",
- functionName: "searchVideo",
+ title: "搜索",
+ description: "搜索视频",
+ requiresWebView: false,
+ functionName: "search",
+ cacheDuration: 3600,
  params: [
  {
  name: "keyword",
  title: "关键词",
  type: "input",
- value: ""
+ description: "关键词"
  }
  ]
  },
  {
- title: "热播推荐",
- functionName: "getHot",
+ title: "热播",
+ description: "热播推荐",
+ requiresWebView: false,
+ functionName: "hot",
+ cacheDuration: 1800,
  params: [
  {
  name: "category",
  title: "分类",
  type: "enumeration",
+ description: "分类",
  value: "tv",
  enumOptions: [
  { title: "电视剧", value: "tv" },
@@ -38,15 +46,11 @@ var WidgetMetadata = {
  ]
 };
 
-var CHANNEL_MAP = {
- tv: "1",
- movie: "2"
-};
 
-async function searchVideo(params) {
+async function search(params) {
  var keyword = params.keyword || "";
  if (!keyword) {
- throw new Error("请输入搜索关键词");
+ throw new Error("请输入关键词");
  }
 
  var url = "https://pcw-api.iqiyi.com/search/recommend/list?page_id=1&ret_num=20&channel_id=1&mode=24&data_type=1&keyword=" + encodeURIComponent(keyword);
@@ -66,9 +70,9 @@ async function searchVideo(params) {
  });
 }
 
-async function getHot(params) {
+async function hot(params) {
  var category = params.category || "tv";
- var channelId = CHANNEL_MAP[category] || "1";
+ var channelId = category === "movie" ? "2" : "1";
 
  var url = "https://mesh.if.iqiyi.com/portal/lw/videolib/data?ret_num=30&channel_id=" + channelId + "&page_id=1";
 
@@ -82,7 +86,6 @@ async function getHot(params) {
  type: "url",
  title: item.title || "",
  posterPath: item.imageUrl || "",
- rating: item.score || "",
  link: albumId ? "https://www.iqiyi.com/a_" + albumId + ".html" : ""
  };
  });
