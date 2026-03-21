@@ -4,7 +4,7 @@ WidgetMetadata = {
  description: "爱奇艺视频搜索与热播推荐",
  author: "Forward",
  site: "https://www.iqiyi.com",
- version: "1.0.1",
+ version: "1.0.0",
  requiredVersion: "0.0.1",
  detailCacheDuration: 60,
  modules: [
@@ -50,23 +50,19 @@ WidgetMetadata = {
  ]
 };
 
-// 视频解析接口列表
-var videoParseList = [
+// 视频解析接口
+var parseUrls = [
  "https://jiexi.789jiexi.icu:4433/?url=",
  "https://jx.playerjy.com/?url=",
- "https://jx.hls.one/?url=",
- "https://jx.2s0.cn/player/?url=",
- "https://bd.jx.cn/?url=",
- "https://www.pouyun.com/?url=",
- "https://jx.973973.xyz/?url=",
- "https://jx.xmflv.com/?url=",
  "https://www.ckplayer.vip/jiexi/?url=",
- "https://jx.nnxv.cn/tv.php?url=",
 ];
 
 function getParseUrl(originalUrl) {
- // 使用第一个可用的解析接口
- return videoParseList[0] + encodeURIComponent(originalUrl);
+ // 尝试多个解析接口
+ for (var i = 0; i < parseUrls.length; i++) {
+ return parseUrls[i] + encodeURIComponent(originalUrl);
+ }
+ return parseUrls[0] + encodeURIComponent(originalUrl);
 }
 
 async function search(params) {
@@ -100,7 +96,7 @@ async function search(params) {
  
  return {
  id: idValue || Math.random().toString(36),
- type: "url",
+ type: "detail",
  title: item.title || "",
  description: item.description || "",
  posterPath: item.imageUrl || item.picUrl || "",
@@ -137,7 +133,7 @@ async function getTvHot(params) {
  if (title && link) {
  results.push({
  id: albumId || tvId || Math.random().toString(36),
- type: "url",
+ type: "detail",
  title: title,
  posterPath: img,
  link: link,
@@ -176,7 +172,7 @@ async function getMovieHot(params) {
  if (title && link) {
  results.push({
  id: albumId || tvId || Math.random().toString(36),
- type: "url",
+ type: "detail",
  title: title,
  posterPath: img,
  link: link,
@@ -215,7 +211,7 @@ async function getVarietyHot(params) {
  if (title && link) {
  results.push({
  id: albumId || tvId || Math.random().toString(36),
- type: "url",
+ type: "detail",
  title: title,
  posterPath: img,
  link: link,
@@ -228,12 +224,12 @@ async function getVarietyHot(params) {
 }
 
 async function loadDetail(link) {
- // 使用解析接口获取真实视频地址
+ // 获取解析后的视频地址
  var parseUrl = getParseUrl(link);
  
  return {
  id: link,
- type: "url",
+ type: "detail",
  videoUrl: parseUrl,
  link: link,
  playerType: "system"
