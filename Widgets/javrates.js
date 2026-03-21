@@ -1,10 +1,10 @@
 var WidgetMetadata = {
   id: "fly.javrate",
-  title: "JAVRates",
-  description: "JAVRate",
+  title: "JAVRate",
+  description: "JAVRate完美",
   author: "fly",
   site: "https://www.javrate.com/",
-  version: "2.2.5",
+  version: "2.2.6",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -990,10 +990,11 @@ function parseDetailPage(html) {
 
 function parseItems($, listPageUrl) {
   const videoItems = [];
-  $('div[class^="movie-grid-new-"] .mgn-item').each((_, el) => {
+  $('div[class*="movie-grid-new-"] .mgn-item').each((_, el) => {
     try {
       const item = $(el);
-      const relativeLink = item.find(".mgn-title a").attr("href");
+      // 从图片链接取 href，避免 .mgn-title 下多个 <a> 的歧义
+      const relativeLink = item.find(".mgn-picture a").attr("href");
       const titleElement = item.find(".mgn-title h3");
       if (!relativeLink || !titleElement.length) return;
 
