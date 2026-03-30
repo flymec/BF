@@ -614,76 +614,79 @@ var WidgetMetadata = {
 
 var UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36";
 
-function safeJson(data) {
-  if (typeof data === "string") {
-    try { return JSON.parse(data); } catch (_) { return {}; }
-  }
-  return data || {};
-}
-
 function ensureArray(v) {
   return Array.isArray(v) ? v : [];
 }
 
-// ── HTML 解析（使用 Widget.dom）─────────────────────────────
-// fix: 原代码使用了未文档化的 Widget.html.load (cheerio 风格)，
-//      改为规范的 Widget.dom.parse / select / attr / text API。
+// ── HTML 解析（纯正则，完全绕开 Widget.dom 嵌套问题）──────────
+//
+// Widget.dom.select 返回的节点已带有 .html / .attributes 等字段，
+// 但「在子节点里再 select」需要再次 parse(node.outerHtml)，
+// 实测容易因 outerHtml 为空或 API 差异导致无数据。
+// 改用正则直接从整块 HTML 中提取 .video-img-box 片段，再从每段提取字段，
+// 与原始代码逻辑完全一致，稳定性更好。
 
 function parseHtml(htmlContent) {
   var items = [];
-  var docId = Widget.dom.parse(htmlContent);
 
-  try {
-    var cardNodes = Widget.dom.select(docId, ".video-img-box");
-    console.log("parseHtml: found " + cardNodes.length + " cards");
+  // 1. 切出所有 .video-img-box 块
+  //    Jable 的结构: <div class="video-img-box">...</div>
+  //    用非贪婪匹配每一个顶层块
+  var blockRe = /<div[^>]+class="[^"]*video-img-box[^"]*"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/g;
+  var blocks = htmlContent.match(blockRe);
 
-    for (var i = 0; i < cardNodes.length; i++) {
-      var cardNode = cardNodes[i];
-
-      // 对每张卡片的 outerHtml 单独 parse，实现「嵌套选择」
-      var cardDocId = Widget.dom.parse(cardNode.outerHtml);
-      try {
-        var titleNodes    = Widget.dom.select(cardDocId, ".title a");
-        var imgNodes      = Widget.dom.select(cardDocId, "img");
-        var durationNodes = Widget.dom.select(cardDocId, ".absolute-bottom-right .label");
-
-        if (titleNodes.length === 0) {
-          Widget.dom.remove(cardDocId);
-          continue;
-        }
-
-        var titleNode = titleNodes[0];
-        var url       = Widget.dom.attr(titleNode, "href") || "";
-
-        if (!url || url.indexOf("jable.tv") === -1) {
-          Widget.dom.remove(cardDocId);
-          continue;
-        }
-
-        var title    = Widget.dom.text(titleNode) || "";
-        // fix: backdropPath → posterUrl（规范字段名）
-        var poster   = imgNodes.length > 0 ? (Widget.dom.attr(imgNodes[0], "data-src") || "") : "";
-        var preview  = imgNodes.length > 0 ? (Widget.dom.attr(imgNodes[0], "data-preview") || "") : "";
-        var duration = durationNodes.length > 0 ? Widget.dom.text(durationNodes[0]).trim() : "";
-
-        items.push({
-          id:          url,
-          title:       title,
-          posterUrl:   poster,
-          backdropUrl: poster,
-          previewUrl:  preview,
-          link:        url,
-          mediaType:   "movie",
-          description: duration,
-        });
-      } finally {
-        Widget.dom.remove(cardDocId);
-      }
-    }
-  } finally {
-    Widget.dom.remove(docId);
+  if (!blocks || blocks.length === 0) {
+    // 降级：直接从整页提取所有 .title a 和 img
+    console.warn("parseHtml: blockRe matched nothing, falling back to flat extract");
+    blocks = [htmlContent];
   }
 
+  console.log("parseHtml: processing " + blocks.length + " blocks");
+
+  for (var i = 0; i < blocks.length; i++) {
+    var block = blocks[i];
+
+    // 提取 .title a 的 href 和文字
+    var linkRe  = /<a[^>]+class="[^"]*title[^"]*"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/;
+    var linkRe2 = /<h6[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/;
+    var linkMatch = block.match(linkRe) || block.match(linkRe2);
+    if (!linkMatch) { continue; }
+
+    var url   = linkMatch[1] || "";
+    var title = (linkMatch[2] || "").replace(/<[^>]+>/g, "").trim();
+
+    if (!url || url.indexOf("jable.tv") === -1) { continue; }
+
+    // 提取 img 的 data-src（封面）和 data-preview（预览）
+    var imgRe    = /<img[^>]+>/;
+    var imgMatch = block.match(imgRe);
+    var poster   = "";
+    var preview  = "";
+    if (imgMatch) {
+      var imgTag    = imgMatch[0];
+      var srcMatch  = imgTag.match(/data-src="([^"]+)"/);
+      var prevMatch = imgTag.match(/data-preview="([^"]+)"/);
+      poster  = srcMatch  ? srcMatch[1]  : "";
+      preview = prevMatch ? prevMatch[1] : "";
+    }
+
+    // 提取时长标签
+    var durRe    = /<span[^>]+class="[^"]*label[^"]*"[^>]*>([\s\S]*?)<\/span>/;
+    var durMatch = block.match(durRe);
+    var duration = durMatch ? durMatch[1].replace(/<[^>]+>/g, "").trim() : "";
+
+    items.push({
+      id:          url,
+      title:       title,
+      posterUrl:   poster,
+      backdropUrl: poster,
+      link:        url,
+      mediaType:   "movie",
+      description: duration,
+    });
+  }
+
+  console.log("parseHtml: extracted " + items.length + " items");
   return items;
 }
 
@@ -700,10 +703,16 @@ async function fetchHtml(url) {
   if (!response || !response.ok) {
     throw new Error("HTTP " + (response ? response.status : "?") + " - " + url);
   }
-  if (typeof response.data !== "string" || response.data.length === 0) {
-    throw new Error("无法获取有效的 HTML 内容: " + url);
+
+  var data = response.data;
+  if (typeof data !== "string") {
+    // Widget.http 有时返回已解析对象，转回字符串
+    try { data = JSON.stringify(data); } catch(_) {}
   }
-  return response.data;
+  if (!data || data.length === 0) {
+    throw new Error("响应内容为空: " + url);
+  }
+  return data;
 }
 
 // ── 数据源函数 ───────────────────────────────────────────────
@@ -729,9 +738,11 @@ async function loadPage(params) {
     if (params.sort_by) { url += "&sort_by=" + params.sort_by; }
     if (params.from)    { url += "&from="    + params.from;    }
 
+    console.log("loadPage fetching:", url);
     var html = await fetchHtml(url);
+    console.log("loadPage html length:", html.length);
+
     var items = parseHtml(html);
-    console.log("loadPage: " + items.length + " items from " + url);
     return items;
   } catch (err) {
     console.error("loadPage error:", err.message);
@@ -740,28 +751,29 @@ async function loadPage(params) {
 }
 
 // ── loadDetail ───────────────────────────────────────────────
-// fix: 返回结构改为规范的 { title, videoUrl }，去掉多余字段 id/type/childItems。
-//      customHeaders 保留（播放器可能支持透传）。
 
 async function loadDetail(link) {
   try {
     var html = await fetchHtml(link);
 
-    var match = html.match(/var hlsUrl\s*=\s*['"]([^'"]+)['"]/);
+    // hlsUrl 提取：兼容单双引号
+    var match = html.match(/var\s+hlsUrl\s*=\s*['"]([^'"]+)['"]/);
     if (!match || !match[1]) {
       throw new Error("未匹配到 hlsUrl，页面结构可能已变更");
     }
     var hlsUrl = match[1];
 
-    // 提取标题（页面 <title> 或 h3 等）供 App 展示
-    var titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    var title = titleMatch ? titleMatch[1].replace(/\s*[\|–\-].*$/, "").trim() : "";
+    // 标题：取 <h4> 或 <title>
+    var titleMatch = html.match(/<h4[^>]*>([\s\S]*?)<\/h4>/) ||
+                     html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    var title = titleMatch
+      ? titleMatch[1].replace(/<[^>]+>/g, "").replace(/\s*[\|–\-].*$/, "").trim()
+      : "";
 
-    console.log("loadDetail: hlsUrl=" + (hlsUrl ? "found" : "missing") + " title=" + title);
+    console.log("loadDetail ok, title:", title, "hlsUrl found:", !!hlsUrl);
 
-    // fix: 规范返回结构
     return {
-      title: title,
+      title:   title,
       videoUrl: hlsUrl,
       customHeaders: {
         "Referer":    link,
