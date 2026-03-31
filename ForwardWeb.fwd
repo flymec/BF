@@ -74,6 +74,15 @@
       "version": "0.9.4",
       "author": "flyme",
       "url": "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/91porn.js"
+    },
+{
+      "id": "forward.playurl.danmu",
+      "title": "通用弹幕",
+      "description": "通用弹幕模块",
+      "requiredVersion": "0.0.2",
+      "version": "1.0.2",
+      "author": "Baranwang",
+      "url": "https://unpkg.com/@forward-widget/danmu-universe"
     }
   ]
 }
