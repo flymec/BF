@@ -76,15 +76,4 @@
       "url": "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/91porn.js"
     }
   ]
-},
-{
-      "id": "combined",
-      "title": "combined",
-      "description": "combined",
-      "requiredVersion": "0.0.1",
-      "version": "0.9.4",
-      "author": "flyme",
-      "url": "https://raw.githubusercontent.com/flymec/BF/refs/heads/main/Widgets/combined.js"
-    }
-  ]
 }
