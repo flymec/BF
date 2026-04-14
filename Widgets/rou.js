@@ -55,6 +55,7 @@ params: [
 name: “url”,
 title: “選擇廠商”,
 type: “enumeration”,
+description: “選擇廠商”,
 enumOptions: [
 { title: “糖心Vlog”, value: “https://rou.video/t/糖心Vlog” },
 { title: “蜜桃影像傳媒”, value: “https://rou.video/t/蜜桃影像傳媒” },
@@ -100,6 +101,7 @@ params: [
 name: “url”,
 title: “選擇系列”,
 type: “enumeration”,
+description: “選擇系列”,
 enumOptions: [
 { title: “麻豆傳媒（全部）”, value: “https://rou.video/t/麻豆傳媒” },
 { title: “愛豆傳媒”, value: “https://rou.video/t/愛豆傳媒” },
@@ -137,6 +139,7 @@ params: [
 name: “url”,
 title: “選擇系列”,
 type: “enumeration”,
+description: “選擇系列”,
 enumOptions: [
 { title: “探花（全部）”, value: “https://rou.video/t/探花” },
 { title: “91沈先生”, value: “https://rou.video/t/91沈先生” },
@@ -195,6 +198,7 @@ params: [
 name: “url”,
 title: “選擇博主”,
 type: “enumeration”,
+description: “選擇博主”,
 enumOptions: [
 { title: “OnlyFans（全部）”, value: “https://rou.video/t/OnlyFans” },
 { title: “fansly”, value: “https://rou.video/t/fansly” },
@@ -244,9 +248,8 @@ value: “https://rou.video/t/日本”,
 
 async function search(params = {}) {
 var keyword = encodeURIComponent(params.keyword || “”);
-var page = params.from || “1”;
-var url = “https://rou.video/search?q=” + keyword + “&page=” + page;
-return await loadPage({ url: url });
+var url = “https://rou.video/search?q=” + keyword;
+return await loadPage({ url: url, from: params.from });
 }
 
 async function loadPage(params = {}) {
