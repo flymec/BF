@@ -296,13 +296,15 @@ value: “1”,
 },
 };
 
-async function search(params = {}) {
+async function search(params) {
+params = params || {};
 var keyword = encodeURIComponent(params.keyword || “”);
 var url = “https://rou.video/search?q=” + keyword;
 return await loadPage({ url: url, from: params.from });
 }
 
-async function loadPage(params = {}) {
+async function loadPage(params) {
+params = params || {};
 var sections = await loadPageSections(params);
 var items = [];
 for (var i = 0; i < sections.length; i++) {
@@ -314,7 +316,8 @@ items.push(childItems[j]);
 return items;
 }
 
-async function loadPageSections(params = {}) {
+async function loadPageSections(params) {
+params = params || {};
 try {
 var url = params.url;
 if (!url) {
