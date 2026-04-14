@@ -1,4 +1,4 @@
-WidgetMetadata = {
+var WidgetMetadata = {
 id: “rou”,
 title: “肉視頻”,
 description: “獲取 rou.video 視頻”,
@@ -8,29 +8,13 @@ version: “1.0.0”,
 requiredVersion: “0.0.1”,
 detailCacheDuration: 60,
 modules: [
-// 搜索模块
-{
-title: “搜索”,
-description: “搜索視頻”,
-requiresWebView: false,
-functionName: “search”,
-cacheDuration: 3600,
-params: [
-{
-name: “keyword”,
-title: “關鍵詞”,
-type: “input”,
-description: “關鍵詞”,
-},
-{ name: “from”, title: “頁碼”, type: “page”, description: “頁碼”, value: “1” },
-],
-},
 // 最新模块
 {
 title: “最新”,
 description: “最新視頻”,
 requiresWebView: false,
 functionName: “loadPage”,
+sectionMode: false,
 cacheDuration: 3600,
 params: [
 {
@@ -40,7 +24,13 @@ type: “constant”,
 description: “列表地址”,
 value: “https://rou.video/videos”,
 },
-{ name: “from”, title: “頁碼”, type: “page”, description: “頁碼”, value: “1” },
+{
+name: “from”,
+title: “頁碼”,
+type: “page”,
+description: “頁碼”,
+value: “1”,
+},
 ],
 },
 // 國產AV模块
@@ -49,6 +39,7 @@ title: “國產AV”,
 description: “按廠商分類瀏覽國產AV”,
 requiresWebView: false,
 functionName: “loadPage”,
+sectionMode: false,
 cacheDuration: 3600,
 params: [
 {
@@ -56,6 +47,7 @@ name: “url”,
 title: “選擇廠商”,
 type: “enumeration”,
 description: “選擇廠商”,
+value: “https://rou.video/t/糖心Vlog”,
 enumOptions: [
 { title: “糖心Vlog”, value: “https://rou.video/t/糖心Vlog” },
 { title: “蜜桃影像傳媒”, value: “https://rou.video/t/蜜桃影像傳媒” },
@@ -84,9 +76,14 @@ enumOptions: [
 { title: “樂播傳媒”, value: “https://rou.video/t/樂播傳媒” },
 { title: “葫蘆影業”, value: “https://rou.video/t/葫蘆影業” },
 ],
-value: “https://rou.video/t/糖心Vlog”,
 },
-{ name: “from”, title: “頁碼”, type: “page”, description: “頁碼”, value: “1” },
+{
+name: “from”,
+title: “頁碼”,
+type: “page”,
+description: “頁碼”,
+value: “1”,
+},
 ],
 },
 // 麻豆傳媒模块
@@ -95,6 +92,7 @@ title: “麻豆”,
 description: “按系列分類瀏覽麻豆傳媒”,
 requiresWebView: false,
 functionName: “loadPage”,
+sectionMode: false,
 cacheDuration: 3600,
 params: [
 {
@@ -102,6 +100,7 @@ name: “url”,
 title: “選擇系列”,
 type: “enumeration”,
 description: “選擇系列”,
+value: “https://rou.video/t/麻豆傳媒”,
 enumOptions: [
 { title: “麻豆傳媒（全部）”, value: “https://rou.video/t/麻豆傳媒” },
 { title: “愛豆傳媒”, value: “https://rou.video/t/愛豆傳媒” },
@@ -122,9 +121,14 @@ enumOptions: [
 { title: “突襲女優家”, value: “https://rou.video/t/突襲女優家” },
 { title: “國產麻豆AV節目”, value: “https://rou.video/t/國產麻豆AV節目” },
 ],
-value: “https://rou.video/t/麻豆傳媒”,
 },
-{ name: “from”, title: “頁碼”, type: “page”, description: “頁碼”, value: “1” },
+{
+name: “from”,
+title: “頁碼”,
+type: “page”,
+description: “頁碼”,
+value: “1”,
+},
 ],
 },
 // 探花模块
@@ -133,6 +137,7 @@ title: “探花”,
 description: “按系列分類瀏覽探花”,
 requiresWebView: false,
 functionName: “loadPage”,
+sectionMode: false,
 cacheDuration: 3600,
 params: [
 {
@@ -140,6 +145,7 @@ name: “url”,
 title: “選擇系列”,
 type: “enumeration”,
 description: “選擇系列”,
+value: “https://rou.video/t/探花”,
 enumOptions: [
 { title: “探花（全部）”, value: “https://rou.video/t/探花” },
 { title: “91沈先生”, value: “https://rou.video/t/91沈先生” },
@@ -160,12 +166,16 @@ enumOptions: [
 { title: “李尋歡”, value: “https://rou.video/t/李尋歡” },
 { title: “韋小寶”, value: “https://rou.video/t/韋小寶” },
 { title: “換妻探花”, value: “https://rou.video/t/換妻探花” },
-{ title: “杏吧傳媒（探花）”, value: “https://rou.video/t/杏吧傳媒” },
 { title: “行吧傳媒”, value: “https://rou.video/t/行吧傳媒” },
 ],
-value: “https://rou.video/t/探花”,
 },
-{ name: “from”, title: “頁碼”, type: “page”, description: “頁碼”, value: “1” },
+{
+name: “from”,
+title: “頁碼”,
+type: “page”,
+description: “頁碼”,
+value: “1”,
+},
 ],
 },
 // 自拍流出模块
@@ -174,6 +184,7 @@ title: “自拍流出”,
 description: “自拍流出視頻”,
 requiresWebView: false,
 functionName: “loadPage”,
+sectionMode: false,
 cacheDuration: 3600,
 params: [
 {
@@ -183,7 +194,13 @@ type: “constant”,
 description: “列表地址”,
 value: “https://rou.video/t/自拍流出”,
 },
-{ name: “from”, title: “頁碼”, type: “page”, description: “頁碼”, value: “1” },
+{
+name: “from”,
+title: “頁碼”,
+type: “page”,
+description: “頁碼”,
+value: “1”,
+},
 ],
 },
 // OnlyFans模块
@@ -192,6 +209,7 @@ title: “OnlyFans”,
 description: “按博主分類瀏覽OnlyFans視頻”,
 requiresWebView: false,
 functionName: “loadPage”,
+sectionMode: false,
 cacheDuration: 3600,
 params: [
 {
@@ -199,6 +217,7 @@ name: “url”,
 title: “選擇博主”,
 type: “enumeration”,
 description: “選擇博主”,
+value: “https://rou.video/t/OnlyFans”,
 enumOptions: [
 { title: “OnlyFans（全部）”, value: “https://rou.video/t/OnlyFans” },
 { title: “fansly”, value: “https://rou.video/t/fansly” },
@@ -220,9 +239,14 @@ enumOptions: [
 { title: “emmy18y（艾玛）”, value: “https://rou.video/t/emmy18y” },
 { title: “fansone”, value: “https://rou.video/t/fansone” },
 ],
-value: “https://rou.video/t/OnlyFans”,
 },
-{ name: “from”, title: “頁碼”, type: “page”, description: “頁碼”, value: “1” },
+{
+name: “from”,
+title: “頁碼”,
+type: “page”,
+description: “頁碼”,
+value: “1”,
+},
 ],
 },
 // 日本模块
@@ -231,6 +255,7 @@ title: “日本”,
 description: “日本視頻”,
 requiresWebView: false,
 functionName: “loadPage”,
+sectionMode: false,
 cacheDuration: 3600,
 params: [
 {
@@ -240,10 +265,35 @@ type: “constant”,
 description: “列表地址”,
 value: “https://rou.video/t/日本”,
 },
-{ name: “from”, title: “頁碼”, type: “page”, description: “頁碼”, value: “1” },
+{
+name: “from”,
+title: “頁碼”,
+type: “page”,
+description: “頁碼”,
+value: “1”,
+},
 ],
 },
 ],
+search: {
+title: “搜索”,
+functionName: “search”,
+params: [
+{
+name: “keyword”,
+title: “關鍵詞”,
+type: “input”,
+description: “關鍵詞”,
+},
+{
+name: “from”,
+title: “頁碼”,
+type: “page”,
+description: “頁碼”,
+value: “1”,
+},
+],
+},
 };
 
 async function search(params = {}) {
@@ -305,37 +355,29 @@ function parseHtml(htmlContent) {
 var $ = Widget.html.load(htmlContent);
 var items = [];
 
-// rou.video 視頻卡片選擇器
-var cardSelector = “a.group”;
-
-var cardElements = $(cardSelector).toArray();
+var cardElements = $(“a.group”).toArray();
 
 for (var i = 0; i < cardElements.length; i++) {
 var $card = $(cardElements[i]);
 var href = $card.attr(“href”) || “”;
 
 ```
-// 只處理視頻詳情鏈接 /v/xxx
 if (!href || href.indexOf("/v/") < 0) {
   continue;
 }
 
 var link = href.startsWith("http") ? href : "https://rou.video" + href;
 
-// 封面圖
 var $img = $card.find("img").first();
 var cover = $img.attr("src") || $img.attr("data-src") || "";
 
-// 標題
 var title = $card.find("h2, h3, .title, [class*='title']").first().text().trim();
 if (!title) {
   title = $card.attr("title") || $img.attr("alt") || "";
 }
 
-// 時長
 var duration = $card.find("[class*='duration'], [class*='time'], .label").first().text().trim();
 
-// 標籤/分類
 var tags = [];
 $card.find("a[href*='/t/']").each(function () {
   var tagText = $(this).text().trim();
@@ -374,21 +416,16 @@ headers: {
 });
 
 var html = response.data;
-
-// 嘗試從頁面中提取 m3u8 / 視頻 URL
 var hlsUrl = “”;
 
-// 方式1: 匹配常見變量賦值
 var m1 = html.match(/(?:hlsUrl|videoUrl|src|file)\s*[=:]\s*[’”]([^'"]+.m3u8[^'"]*)[’”]/i);
 if (m1) hlsUrl = m1[1];
 
-// 方式2: 匹配 sources 陣列
 if (!hlsUrl) {
 var m2 = html.match(/“file”\s*:\s*”([^”]+.m3u8[^”]*)”/i);
 if (m2) hlsUrl = m2[1];
 }
 
-// 方式3: 直接搜索 .m3u8
 if (!hlsUrl) {
 var m3 = html.match(/https?://[^\s’”<>]+.m3u8[^\s’”<>]*/);
 if (m3) hlsUrl = m3[0];
@@ -410,7 +447,6 @@ customHeaders: {
 },
 };
 
-// 嘗試加載相關推薦
 try {
 var sections = parseHtml(html);
 var related = [];
