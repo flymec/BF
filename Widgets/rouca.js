@@ -22,7 +22,7 @@ WidgetMetadata = {
           title: "列表地址",
           type: "constant",
           description: "列表地址",
-          value: "https://rou.video/videos",
+          value: "https://rou.video/home",
         },
         {
           name: "from",
@@ -62,7 +62,6 @@ WidgetMetadata = {
             { title: "大象傳媒", value: "https://rou.video/t/大象傳媒" },
             { title: "果凍傳媒", value: "https://rou.video/t/果凍傳媒" },
             { title: "蘿莉社", value: "https://rou.video/t/蘿莉社" },
-            { title: "ED Mosaic", value: "https://rou.video/t/ED Mosaic" },
             { title: "兔子先生", value: "https://rou.video/t/兔子先生" },
             { title: "扣扣傳媒", value: "https://rou.video/t/扣扣傳媒" },
             { title: "SA國際傳媒", value: "https://rou.video/t/SA國際傳媒" },
@@ -115,7 +114,6 @@ WidgetMetadata = {
             { title: "貓爪影像", value: "https://rou.video/t/貓爪影像" },
             { title: "麻豆女神微愛視頻", value: "https://rou.video/t/麻豆女神微愛視頻" },
             { title: "麻豆番外", value: "https://rou.video/t/麻豆番外" },
-            { title: "麻豆三十天特別企劃", value: "https://rou.video/t/麻豆三十天特別企劃" },
             { title: "麻豆導演系列", value: "https://rou.video/t/麻豆導演系列" },
             { title: "情趣K歌房", value: "https://rou.video/t/情趣K歌房" },
             { title: "突襲女優家", value: "https://rou.video/t/突襲女優家" },
@@ -324,18 +322,18 @@ async function loadPageSections(params) {
     if (!url) {
       throw new Error("地址不能為空");
     }
+
+    // 翻页: ?order=createdAt&page=N
     var page = params.from;
     if (page && page !== "1") {
       var sep = url.indexOf("?") >= 0 ? "&" : "?";
-      url += sep + "page=" + page;
+      url += sep + "order=createdAt&page=" + page;
     }
 
     var response = await Widget.http.get(url, {
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept":
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
         "Referer": "https://rou.video/",
       },
@@ -356,33 +354,32 @@ function parseHtml(htmlContent) {
   var $ = Widget.html.load(htmlContent);
   var items = [];
 
-  var cardElements = $("a.group").toArray();
+  // 每个视频卡片: <a href="/v/xxx">...</a>
+  var linkElements = $("a[href^='/v/']").toArray();
 
-  for (var i = 0; i < cardElements.length; i++) {
-    var $card = $(cardElements[i]);
-    var href = $card.attr("href") || "";
-
-    if (!href || href.indexOf("/v/") < 0) {
+  for (var i = 0; i < linkElements.length; i++) {
+    var $a = $(linkElements[i]);
+    var href = $a.attr("href") || "";
+    if (!href || href.indexOf("/v/") !== 0) {
       continue;
     }
 
-    var link = href.startsWith("http") ? href : "https://rou.video" + href;
+    var link = "https://rou.video" + href;
 
-    var $img = $card.find("img").first();
+    // 封面: img 的 src，通常是第一张图
+    var $img = $a.find("img").first();
     var cover = $img.attr("src") || $img.attr("data-src") || "";
 
-    var title = $card.find("h2, h3, .title, [class*='title']").first().text().trim();
+    // 标题: img 的 alt 属性即标题
+    var title = $img.attr("alt") || "";
     if (!title) {
-      title = $card.attr("title") || $img.attr("alt") || "";
+      title = $a.text().trim();
     }
 
-    var duration = $card.find("[class*='duration'], [class*='time'], .label").first().text().trim();
-
-    var tags = [];
-    $card.find("a[href*='/t/']").each(function () {
-      var tagText = $(this).text().trim();
-      if (tagText) tags.push(tagText);
-    });
+    // 时长: a 标签内文本中匹配时间格式
+    var aText = $a.text() || "";
+    var durationMatch = aText.match(/(\d+小時\d+分\d+秒|\d+小時\d+分|\d+分\d+秒|\d+分|\d+秒)/);
+    var duration = durationMatch ? durationMatch[0] : "";
 
     if (link && title) {
       items.push({
@@ -393,7 +390,7 @@ function parseHtml(htmlContent) {
         link: link,
         mediaType: "movie",
         durationText: duration,
-        description: tags.join(" · ") || duration,
+        description: duration,
       });
     }
   }
@@ -407,8 +404,7 @@ function parseHtml(htmlContent) {
 async function loadDetail(link) {
   var response = await Widget.http.get(link, {
     headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       "Referer": "https://rou.video/",
     },
   });
@@ -416,7 +412,7 @@ async function loadDetail(link) {
   var html = response.data;
   var hlsUrl = "";
 
-  var m1 = html.match(/(?:hlsUrl|videoUrl|src|file)\s*[=:]\s*['"]([^'"]+\.m3u8[^'"]*)['"]/i);
+  var m1 = html.match(/(?:hlsUrl|videoUrl|file)\s*[=:]\s*['"]([^'"]+\.m3u8[^'"]*)['"]/i);
   if (m1) hlsUrl = m1[1];
 
   if (!hlsUrl) {
@@ -430,7 +426,7 @@ async function loadDetail(link) {
   }
 
   if (!hlsUrl) {
-    throw new Error("無法獲取視頻流地址，可能需要 WebView 解析");
+    throw new Error("無法獲取視頻流地址");
   }
 
   var item = {
@@ -440,8 +436,7 @@ async function loadDetail(link) {
     mediaType: "movie",
     customHeaders: {
       "Referer": link,
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     },
   };
 
