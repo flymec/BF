@@ -4,7 +4,7 @@ WidgetMetadata = {
   description: "獲取 rou.video 視頻",
   author: "alex",
   site: "https://rou.video",
-  version: "1.0.1",
+  version: "1.0.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -411,7 +411,7 @@ async function loadDetail(link) {
   const response = await Widget.http.get(link, { headers });
   const html = response.data;
 
-  // 2. 提取 __NEXT_DATA__ 中的视频信息
+  // 2. 提取 __NEXT_DATA__ 中的视频元数据
   const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
   if (!nextDataMatch) throw new Error("无法解析页面数据");
   const nextData = JSON.parse(nextDataMatch[1]);
@@ -427,67 +427,49 @@ async function loadDetail(link) {
   const domainMatch = coverUrl.match(/https?:\/\/([^\/]+)/);
   const cdnDomain = domainMatch ? domainMatch[1] : "v.rn246.xyz";
 
-  // 3. 构建可能的 m3u8 候选列表
-  const candidates = [
-    `https://${cdnDomain}/hls/${folder}/${folder}/playlist.m3u8`,
-    `https://${cdnDomain}/hls/${folder}/${folder}/index.m3u8`,
-    `https://${cdnDomain}/hls/${folder}/${folder}/master.m3u8`,
-    `https://${cdnDomain}/hls/${folder}/playlist.m3u8`,
-    `https://${cdnDomain}/hls/${folder}/index.m3u8`,
-  ];
-
-  // 4. 并发探测可用的 m3u8 地址（HEAD 请求，不下载内容）
-  let validM3u8 = null;
-  for (const url of candidates) {
-    try {
-      const headResp = await Widget.http.head(url, { headers });
-      if (headResp.statusCode === 200) {
-        validM3u8 = url;
-        break;
-      }
-    } catch (e) {
-      // 忽略错误，继续下一个
+  // 3. 尝试从 HTML 中直接提取已签名的 m3u8 链接（最高优先级）
+  const m3u8Regex = /(https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*\?[^\s"'<>]+)/gi;
+  const matches = html.match(m3u8Regex) || [];
+  for (const url of matches) {
+    if (url.includes(folder)) {
+      // 找到直接可用的 m3u8 地址
+      return buildDetailItem(link, url, headers);
     }
   }
 
-  if (!validM3u8) {
-    // 如果 HEAD 请求被阻止，可以尝试带 Range 的 GET 请求（只获取一个字节）
-    for (const url of candidates) {
-      try {
-        const testResp = await Widget.http.get(url, {
-          headers: { ...headers, "Range": "bytes=0-0" }
-        });
-        if (testResp.statusCode === 206 || testResp.statusCode === 200) {
-          validM3u8 = url;
-          break;
-        }
-      } catch (e) {}
-    }
-  }
+  // 4. 如果没找到，则构造带签名的虚拟 m3u8（签名参数从封面图复用）
+  const imgQueryMatch = coverUrl.match(/\?(.+)$/);
+  const authQuery = imgQueryMatch ? "?" + imgQueryMatch[1] : "";
+  const tsBase = `https://${cdnDomain}/hls/${folder}/${folder}/CLS-`;
 
-  if (!validM3u8) {
-    throw new Error("无法定位有效的 m3u8 文件，请检查 CDN 或手动提供地址。");
-  }
+  // 根据时长估算片段数（每个片段约 8 秒）
+  const duration = video.duration || 600;
+  const segments = Math.ceil(duration / 8);
 
-  // 5. 构造返回对象
-  const item = {
-    id: link,
+  let m3u8Content = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n";
+  for (let i = 0; i < segments; i++) {
+    const seq = i.toString().padStart(3, '0');
+    m3u8Content += `#EXTINF:10.0,\n${tsBase}${seq}.ts${authQuery}\n`;
+  }
+  m3u8Content += "#EXT-X-ENDLIST";
+
+  // 转为 data URI（避免跨域和文件存储问题）
+  const dataUri = "data:application/vnd.apple.mpegurl;base64," + btoa(unescape(encodeURIComponent(m3u8Content)));
+
+  return buildDetailItem(link, dataUri, headers);
+}
+
+// 辅助函数：构造返回的 detail 对象
+function buildDetailItem(pageUrl, videoUrl, headers) {
+  return {
+    id: pageUrl,
     type: "detail",
-    videoUrl: validM3u8,
+    videoUrl: videoUrl,
     mediaType: "movie",
     customHeaders: {
-      "Referer": link,
+      "Referer": pageUrl,
       "Origin": "https://rou.video",
       "User-Agent": headers["User-Agent"]
     },
   };
-
-  // 6. 添加相关推荐
-  try {
-    const sections = parseHtml(html);
-    const related = sections.flatMap(s => s.childItems);
-    if (related.length) item.childItems = related;
-  } catch (e) {}
-
-  return item;
 }
