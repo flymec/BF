@@ -411,7 +411,7 @@ async function loadDetail(link) {
   const html = response.data;
   let hlsUrl = "";
 
-  // 辅助函数：递归查找对象中的字符串，寻找 m3u8 链接
+  // 辅助函数：递归查找对象中所有包含 .m3u8 的字符串
   function findM3u8InObject(obj) {
     if (typeof obj === 'string') {
       if (obj.includes('.m3u8')) return obj;
@@ -433,24 +433,22 @@ async function loadDetail(link) {
     return null;
   }
 
-  // 方法1: 解析 __NEXT_DATA__ 并解密 ev
+  // 1. 从 __NEXT_DATA__ 解密 ev 字段
   const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
   if (nextDataMatch) {
     try {
       const nextData = JSON.parse(nextDataMatch[1]);
       const ev = nextData.props?.pageProps?.ev;
-      if (ev && ev.d && ev.k !== undefined) {
-        // 解密
+      if (ev && ev.d && typeof ev.k !== 'undefined') {
         const decoded = atob(ev.d);
         let decryptedStr = "";
         for (let i = 0; i < decoded.length; i++) {
           decryptedStr += String.fromCharCode(decoded.charCodeAt(i) ^ ev.k);
         }
         const videoInfo = JSON.parse(decryptedStr);
-        
-        // 常见字段尝试
-        hlsUrl = videoInfo.url || videoInfo.file || videoInfo.videoUrl || videoInfo.source?.[0]?.file || videoInfo.video?.url;
-        
+        // 先尝试常见字段
+        hlsUrl = videoInfo.url || videoInfo.file || videoInfo.videoUrl || 
+                 videoInfo.source?.[0]?.file || videoInfo.video?.url;
         // 如果还没有，递归查找
         if (!hlsUrl) {
           hlsUrl = findM3u8InObject(videoInfo);
@@ -461,7 +459,7 @@ async function loadDetail(link) {
     }
   }
 
-  // 方法2: 如果上面失败，尝试从页面中的 player_data 变量提取
+  // 2. 备用：从 player_data 变量提取
   if (!hlsUrl) {
     const playerMatch = html.match(/player_data\s*=\s*({.*?});/s);
     if (playerMatch) {
@@ -472,7 +470,7 @@ async function loadDetail(link) {
     }
   }
 
-  // 方法3: 调用 API 接口
+  // 3. 备用：调用 API 接口
   if (!hlsUrl) {
     const idMatch = link.match(/\/v\/([a-zA-Z0-9]+)/);
     if (idMatch) {
@@ -489,16 +487,36 @@ async function loadDetail(link) {
     }
   }
 
-  // 方法4: 最后的正则匹配明码 m3u8
+  // 4. 最后的正则匹配
   if (!hlsUrl) {
     const directMatch = html.match(/(https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*)/i);
     if (directMatch) hlsUrl = directMatch[1];
   }
 
+  // 如果仍然失败，抛出详细错误信息（便于调试）
   if (!hlsUrl) {
-    throw new Error("無法獲取視頻流地址，請檢查網站是否更新或手動調試。");
+    let debugInfo = "";
+    try {
+      const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+      if (nextDataMatch) {
+        const nextData = JSON.parse(nextDataMatch[1]);
+        const ev = nextData.props?.pageProps?.ev;
+        if (ev) {
+          const decoded = atob(ev.d);
+          let decryptedStr = "";
+          for (let i = 0; i < decoded.length; i++) {
+            decryptedStr += String.fromCharCode(decoded.charCodeAt(i) ^ ev.k);
+          }
+          debugInfo = "解密后内容: " + decryptedStr.substring(0, 500);
+        }
+      }
+    } catch (e) {
+      debugInfo = "无法解密，错误: " + e.message;
+    }
+    throw new Error("無法獲取視頻流地址。" + debugInfo);
   }
 
+  // 补全协议
   if (hlsUrl.startsWith('//')) hlsUrl = 'https:' + hlsUrl;
 
   const item = {
