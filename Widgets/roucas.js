@@ -437,82 +437,79 @@ function parseHtml(htmlContent) {
   return items.length > 0 ? [{ title: "", childItems: items }] : [];
 }
 
-// 详情解析：如果传入的是页面链接，同样从 __NEXT_DATA__ 构造 m3u8 地址
 async function loadDetail(link) {
-  // 如果 link 已经是 m3u8 地址，直接返回
-  if (link.indexOf(".m3u8") !== -1) {
-    return {
-      id: link,
-      type: "detail",
-      videoUrl: link,
-      mediaType: "movie",
-      customHeaders: {
-        "Referer": "https://rou.video/",
-        "Origin": "https://rou.video",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-      }
-    };
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://rou.video/",
+  };
+
+  // 1. 请求详情页 HTML
+  const response = await Widget.http.get(link, { headers });
+  const html = response.data;
+
+  // 2. 从 __NEXT_DATA__ 提取视频元数据
+  const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+  if (!nextDataMatch) throw new Error("无法解析页面数据");
+  
+  const nextData = JSON.parse(nextDataMatch[1]);
+  const video = nextData.props?.pageProps?.video;
+  if (!video) throw new Error("未找到视频信息");
+
+  // 3. 获取最高分辨率源
+  const sources = video.sources || [];
+  if (sources.length === 0) throw new Error("没有可用的视频源");
+  const bestSource = sources[sources.length - 1];
+  const resolution = bestSource.resolution;
+  const folder = bestSource.folder || `${video.id}-${resolution}`;
+  
+  // 4. 从封面图提取 CDN 域名（封面与视频同域）
+  const coverUrl = video.coverImageUrl;
+  const domainMatch = coverUrl.match(/https?:\/\/([^\/]+)/);
+  const cdnDomain = domainMatch ? domainMatch[1] : "v.rn246.xyz";
+
+  // 5. 构造 TS 片段的基础 URL
+  const tsBaseUrl = `https://${cdnDomain}/hls/${folder}/${folder}/CLS-`;
+
+  // 6. 根据视频时长估算 TS 片段数量（每个片段约 6-10 秒）
+  const duration = video.duration || 300; // 默认 5 分钟
+  const estimatedSegments = Math.ceil(duration / 8); // 按 8 秒一片估算，稍多取一些
+  
+  // 7. 生成虚拟 m3u8 内容（EXT-X-BYTERANGE 不需要，直接完整 TS）
+  let m3u8Content = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n";
+  for (let i = 0; i < estimatedSegments; i++) {
+    const seq = i.toString().padStart(3, '0');
+    m3u8Content += `#EXTINF:10.0,\n${tsBaseUrl}${seq}.ts\n`;
   }
+  m3u8Content += "#EXT-X-ENDLIST";
 
-  // 否则请求详情页HTML
-  var response = await Widget.http.get(link, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Referer": "https://rou.video/",
-    },
-  });
+  // 8. 由于 Widget 可能不支持直接传入 m3u8 字符串，我们将它保存为一个临时文件或使用 data URI
+  //    如果环境支持 data URI 播放 m3u8，可以这样：
+  const dataUri = "data:application/vnd.apple.mpegurl;base64," + btoa(unescape(encodeURIComponent(m3u8Content)));
 
-  var html = response.data;
-  var hlsUrl = "";
-
-  // 从 __NEXT_DATA__ 提取视频数据
-  var nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-  if (nextDataMatch) {
-    try {
-      var nextData = JSON.parse(nextDataMatch[1]);
-      var video = nextData.props?.pageProps?.video;
-      if (video && video.sources && video.sources.length > 0) {
-        // 选最高分辨率
-        var source = video.sources[video.sources.length - 1];
-        var folder = source.folder || video.id + "-" + source.resolution;
-        var coverDomain = video.coverImageUrl.match(/https?:\/\/([^\/]+)/)?.[1] || "v.rn246.xyz";
-        hlsUrl = "https://" + coverDomain + "/hls/" + folder + "/" + folder + "/playlist.m3u8";
-      }
-    } catch (e) {
-      console.error("详情页解析 __NEXT_DATA__ 失败:", e.message);
-    }
-  }
-
-  if (!hlsUrl) {
-    throw new Error("無法獲取視頻流地址");
-  }
-
-  var item = {
+  // 9. 构造返回 item
+  const item = {
     id: link,
     type: "detail",
-    videoUrl: hlsUrl,
+    videoUrl: dataUri,  // 使用 data URI 作为播放源
     mediaType: "movie",
     customHeaders: {
       "Referer": link,
       "Origin": "https://rou.video",
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      "User-Agent": headers["User-Agent"]
     },
   };
 
-  // 添加相关推荐（使用原有的parseHtml解析）
+  // 10. 尝试添加相关推荐
   try {
-    var sections = parseHtml(html);
-    var related = [];
-    for (var i = 0; i < sections.length; i++) {
-      var arr = sections[i].childItems;
-      for (var j = 0; j < arr.length; j++) {
-        related.push(arr[j]);
-      }
-    }
-    if (related.length > 0) {
-      item.childItems = related;
-    }
+    const sections = parseHtml(html);
+    const related = sections.flatMap(s => s.childItems);
+    if (related.length) item.childItems = related;
   } catch (e) {}
 
   return item;
+}
+
+// 辅助函数：UTF8 转 base64（兼容旧环境）
+function btoaUTF8(str) {
+  return btoa(unescape(encodeURIComponent(str)));
 }
