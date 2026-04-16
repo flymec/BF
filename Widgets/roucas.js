@@ -411,65 +411,63 @@ async function loadDetail(link) {
   const response = await Widget.http.get(link, { headers });
   const html = response.data;
 
-  // 2. 提取 __NEXT_DATA__ 中的视频元数据
+  // 2. 提取 __NEXT_DATA__ 中的视频信息
   const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
   if (!nextDataMatch) throw new Error("无法解析页面数据");
   const nextData = JSON.parse(nextDataMatch[1]);
   const video = nextData.props?.pageProps?.video;
   if (!video) throw new Error("未找到视频信息");
 
+  // 3. 获取视频源信息（分辨率、folder）
   const sources = video.sources || [];
   if (sources.length === 0) throw new Error("没有可用源");
   const bestSource = sources[sources.length - 1];
   const folder = bestSource.folder || `${video.id}-${bestSource.resolution}`;
 
+  // 4. 从封面图 URL 提取 CDN 域名和完整的查询参数（签名）
   const coverUrl = video.coverImageUrl;
   const domainMatch = coverUrl.match(/https?:\/\/([^\/]+)/);
   const cdnDomain = domainMatch ? domainMatch[1] : "v.rn246.xyz";
+  const queryMatch = coverUrl.match(/\?(.+)$/);
+  const queryString = queryMatch ? "?" + queryMatch[1] : "";
 
-  // 3. 尝试从 HTML 中直接提取已签名的 m3u8 链接（最高优先级）
-  const m3u8Regex = /(https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*\?[^\s"'<>]+)/gi;
-  const matches = html.match(m3u8Regex) || [];
-  for (const url of matches) {
-    if (url.includes(folder)) {
-      // 找到直接可用的 m3u8 地址
-      return buildDetailItem(link, url, headers);
-    }
-  }
+  // 5. 构造 TS 片段的基础 URL（不含签名参数）
+  const tsBase = `https://${cdnDomain}/hls/${folder}/${folder}-${bestSource.resolution}/CLS-`;
 
-  // 4. 如果没找到，则构造带签名的虚拟 m3u8（签名参数从封面图复用）
-  const imgQueryMatch = coverUrl.match(/\?(.+)$/);
-  const authQuery = imgQueryMatch ? "?" + imgQueryMatch[1] : "";
-  const tsBase = `https://${cdnDomain}/hls/${folder}/${folder}/CLS-`;
-
-  // 根据时长估算片段数（每个片段约 8 秒）
+  // 6. 根据时长估算 TS 片段数量（每个片段约 8 秒，适当增加 2 个以防不足）
   const duration = video.duration || 600;
-  const segments = Math.ceil(duration / 8);
+  const segments = Math.ceil(duration / 8) + 2;
 
+  // 7. 生成虚拟 m3u8 内容（EXT-X-BYTERANGE 不需要，直接完整 TS）
   let m3u8Content = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n";
   for (let i = 0; i < segments; i++) {
     const seq = i.toString().padStart(3, '0');
-    m3u8Content += `#EXTINF:10.0,\n${tsBase}${seq}.ts${authQuery}\n`;
+    m3u8Content += `#EXTINF:10.0,\n${tsBase}${seq}.ts${queryString}\n`;
   }
   m3u8Content += "#EXT-X-ENDLIST";
 
-  // 转为 data URI（避免跨域和文件存储问题）
+  // 8. 转为 base64 data URI（播放器可直接识别）
   const dataUri = "data:application/vnd.apple.mpegurl;base64," + btoa(unescape(encodeURIComponent(m3u8Content)));
 
-  return buildDetailItem(link, dataUri, headers);
-}
-
-// 辅助函数：构造返回的 detail 对象
-function buildDetailItem(pageUrl, videoUrl, headers) {
-  return {
-    id: pageUrl,
+  // 9. 构造返回对象
+  const item = {
+    id: link,
     type: "detail",
-    videoUrl: videoUrl,
+    videoUrl: dataUri,
     mediaType: "movie",
     customHeaders: {
-      "Referer": pageUrl,
+      "Referer": link,
       "Origin": "https://rou.video",
       "User-Agent": headers["User-Agent"]
     },
   };
+
+  // 10. 添加相关推荐（如果有 parseHtml 函数）
+  try {
+    const sections = parseHtml(html);
+    const related = sections.flatMap(s => s.childItems);
+    if (related.length) item.childItems = related;
+  } catch (e) {}
+
+  return item;
 }
