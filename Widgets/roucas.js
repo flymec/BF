@@ -402,79 +402,52 @@ function parseHtml(htmlContent) {
 }
 
 async function loadDetail(link) {
-  var response = await Widget.http.get(link, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Referer": "https://rou.video/",
-    },
-  });
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://rou.video/",
+  };
 
-  var html = response.data;
-  var hlsUrl = "";
+  const response = await Widget.http.get(link, { headers });
+  const html = response.data;
+  let hlsUrl = "";
 
-  // 1. 尝试从 window.__NUXT__ 中提取（Nuxt.js 框架常见）
-  var nuxtMatch = html.match(/<script>window\.__NUXT__\s*=\s*({.*?});<\/script>/s);
-  if (nuxtMatch) {
+  // 1. 提取 __NEXT_DATA__ 中的 ev 加密字段
+  const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+  if (nextDataMatch) {
     try {
-      var nuxtData = JSON.parse(nuxtMatch[1]);
-      // 路径可能为 nuxtData.state.video.data.videoUrl 或类似，需要根据实际结构调试
-      var videoData = nuxtData.state?.video?.data || nuxtData.data?.[0]?.video;
-      if (videoData && videoData.videoUrl) {
-        hlsUrl = videoData.videoUrl;
+      const nextData = JSON.parse(nextDataMatch[1]);
+      const ev = nextData.props?.pageProps?.ev;
+      if (ev && ev.d && ev.k !== undefined) {
+        // 解密算法：Base64 解码后逐字节与 k 异或
+        const decoded = atob(ev.d);
+        let decrypted = "";
+        for (let i = 0; i < decoded.length; i++) {
+          decrypted += String.fromCharCode(decoded.charCodeAt(i) ^ ev.k);
+        }
+        const videoInfo = JSON.parse(decrypted);
+        // 根据实际返回结构调整取值路径（常见为 videoInfo.url 或 videoInfo.file）
+        if (videoInfo.url) hlsUrl = videoInfo.url;
+        else if (videoInfo.file) hlsUrl = videoInfo.file;
+        else if (videoInfo.videoUrl) hlsUrl = videoInfo.videoUrl;
       }
-    } catch (e) {}
-  }
-
-  // 2. 尝试从 player_data 变量中提取
-  if (!hlsUrl) {
-    var playerMatch = html.match(/player_data\s*=\s*({.*?});/s);
-    if (playerMatch) {
-      try {
-        var pData = JSON.parse(playerMatch[1]);
-        if (pData.source && pData.source[0]?.file) {
-          hlsUrl = pData.source[0].file;
-        }
-      } catch (e) {}
+    } catch (e) {
+      console.error("解密 __NEXT_DATA__ 失败:", e.message);
     }
   }
 
-  // 3. 匹配视频API接口返回的直链（部分页面会内嵌一个加密后的接口请求）
+  // 2. 如果解密失败，尝试从常见的 API 接口获取（备用方案）
   if (!hlsUrl) {
-    var apiMatch = html.match(/\/api\/video\/[a-zA-Z0-9]+\/source/);
-    if (apiMatch) {
-      var apiUrl = "https://rou.video" + apiMatch[0];
+    const idMatch = link.match(/\/v\/([a-zA-Z0-9]+)/);
+    if (idMatch) {
+      const videoId = idMatch[1];
+      const apiUrl = `https://rou.video/api/video/${videoId}/source`;
       try {
-        var apiResp = await Widget.http.get(apiUrl, {
-          headers: {
-            "Referer": link,
-            "X-Requested-With": "XMLHttpRequest"
-          }
+        const apiResp = await Widget.http.get(apiUrl, {
+          headers: { ...headers, "X-Requested-With": "XMLHttpRequest" }
         });
-        var apiData = typeof apiResp.data === 'string' ? JSON.parse(apiResp.data) : apiResp.data;
-        if (apiData.url) {
-          hlsUrl = apiData.url;
-        } else if (apiData.data && apiData.data.url) {
-          hlsUrl = apiData.data.url;
-        }
-      } catch (e) {}
-    }
-  }
-
-  // 4. 若上述均失败，尝试查找常见的第三方播放器嵌入
-  if (!hlsUrl) {
-    var iframeMatch = html.match(/<iframe[^>]+src=["']([^"']+)["']/i);
-    if (iframeMatch) {
-      // 如果是第三方，可能需要进一步解析，这里先抛出提示
-      throw new Error("该视频使用第三方播放器，暂不支持解析");
-    }
-  }
-
-  // 5. 最后保底：搜索所有已知m3u8链接（可能被base64编码过）
-  if (!hlsUrl) {
-    var base64Match = html.match(/atob\(['"]([A-Za-z0-9+/=]+)['"]\)/);
-    if (base64Match) {
-      try {
-        hlsUrl = atob(base64Match[1]);
+        const apiData = typeof apiResp.data === 'string' ? JSON.parse(apiResp.data) : apiResp.data;
+        if (apiData.url) hlsUrl = apiData.url;
+        else if (apiData.data?.url) hlsUrl = apiData.data.url;
       } catch (e) {}
     }
   }
@@ -483,36 +456,26 @@ async function loadDetail(link) {
     throw new Error("無法獲取視頻流地址");
   }
 
-  // 确保URL完整
-  if (hlsUrl.startsWith('//')) {
-    hlsUrl = 'https:' + hlsUrl;
-  }
+  // 补全协议头
+  if (hlsUrl.startsWith('//')) hlsUrl = 'https:' + hlsUrl;
 
-  var item = {
+  const item = {
     id: link,
     type: "detail",
     videoUrl: hlsUrl,
     mediaType: "movie",
     customHeaders: {
       "Referer": link,
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Origin": "https://rou.video"
+      "Origin": "https://rou.video",
+      "User-Agent": headers["User-Agent"]
     },
   };
 
-  // 相关推荐解析逻辑保持不变
+  // 添加相关推荐（沿用已有的 parseHtml 函数）
   try {
-    var sections = parseHtml(html);
-    var related = [];
-    for (var i = 0; i < sections.length; i++) {
-      var arr = sections[i].childItems;
-      for (var j = 0; j < arr.length; j++) {
-        related.push(arr[j]);
-      }
-    }
-    if (related.length > 0) {
-      item.childItems = related;
-    }
+    const sections = parseHtml(html);
+    const related = sections.flatMap(s => s.childItems);
+    if (related.length) item.childItems = related;
   } catch (e) {}
 
   return item;
