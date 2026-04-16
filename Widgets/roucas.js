@@ -411,31 +411,68 @@ async function loadDetail(link) {
   const html = response.data;
   let hlsUrl = "";
 
-  // 1. 提取 __NEXT_DATA__ 中的 ev 加密字段
+  // 辅助函数：递归查找对象中的字符串，寻找 m3u8 链接
+  function findM3u8InObject(obj) {
+    if (typeof obj === 'string') {
+      if (obj.includes('.m3u8')) return obj;
+      return null;
+    }
+    if (Array.isArray(obj)) {
+      for (let i = 0; i < obj.length; i++) {
+        const found = findM3u8InObject(obj[i]);
+        if (found) return found;
+      }
+    } else if (obj && typeof obj === 'object') {
+      for (let key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          const found = findM3u8InObject(obj[key]);
+          if (found) return found;
+        }
+      }
+    }
+    return null;
+  }
+
+  // 方法1: 解析 __NEXT_DATA__ 并解密 ev
   const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
   if (nextDataMatch) {
     try {
       const nextData = JSON.parse(nextDataMatch[1]);
       const ev = nextData.props?.pageProps?.ev;
       if (ev && ev.d && ev.k !== undefined) {
-        // 解密算法：Base64 解码后逐字节与 k 异或
+        // 解密
         const decoded = atob(ev.d);
-        let decrypted = "";
+        let decryptedStr = "";
         for (let i = 0; i < decoded.length; i++) {
-          decrypted += String.fromCharCode(decoded.charCodeAt(i) ^ ev.k);
+          decryptedStr += String.fromCharCode(decoded.charCodeAt(i) ^ ev.k);
         }
-        const videoInfo = JSON.parse(decrypted);
-        // 根据实际返回结构调整取值路径（常见为 videoInfo.url 或 videoInfo.file）
-        if (videoInfo.url) hlsUrl = videoInfo.url;
-        else if (videoInfo.file) hlsUrl = videoInfo.file;
-        else if (videoInfo.videoUrl) hlsUrl = videoInfo.videoUrl;
+        const videoInfo = JSON.parse(decryptedStr);
+        
+        // 常见字段尝试
+        hlsUrl = videoInfo.url || videoInfo.file || videoInfo.videoUrl || videoInfo.source?.[0]?.file || videoInfo.video?.url;
+        
+        // 如果还没有，递归查找
+        if (!hlsUrl) {
+          hlsUrl = findM3u8InObject(videoInfo);
+        }
       }
     } catch (e) {
       console.error("解密 __NEXT_DATA__ 失败:", e.message);
     }
   }
 
-  // 2. 如果解密失败，尝试从常见的 API 接口获取（备用方案）
+  // 方法2: 如果上面失败，尝试从页面中的 player_data 变量提取
+  if (!hlsUrl) {
+    const playerMatch = html.match(/player_data\s*=\s*({.*?});/s);
+    if (playerMatch) {
+      try {
+        const pData = JSON.parse(playerMatch[1]);
+        if (pData.source?.[0]?.file) hlsUrl = pData.source[0].file;
+      } catch (e) {}
+    }
+  }
+
+  // 方法3: 调用 API 接口
   if (!hlsUrl) {
     const idMatch = link.match(/\/v\/([a-zA-Z0-9]+)/);
     if (idMatch) {
@@ -452,11 +489,16 @@ async function loadDetail(link) {
     }
   }
 
+  // 方法4: 最后的正则匹配明码 m3u8
   if (!hlsUrl) {
-    throw new Error("無法獲取視頻流地址");
+    const directMatch = html.match(/(https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*)/i);
+    if (directMatch) hlsUrl = directMatch[1];
   }
 
-  // 补全协议头
+  if (!hlsUrl) {
+    throw new Error("無法獲取視頻流地址，請檢查網站是否更新或手動調試。");
+  }
+
   if (hlsUrl.startsWith('//')) hlsUrl = 'https:' + hlsUrl;
 
   const item = {
@@ -471,7 +513,7 @@ async function loadDetail(link) {
     },
   };
 
-  // 添加相关推荐（沿用已有的 parseHtml 函数）
+  // 相关推荐
   try {
     const sections = parseHtml(html);
     const related = sections.flatMap(s => s.childItems);
