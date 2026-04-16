@@ -403,58 +403,61 @@ function parseHtml(htmlContent) {
 
 async function loadDetail(link) {
   const headers = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "User-Agent": "Mozilla/5.0",
     "Referer": "https://rou.video/",
   };
 
-  // 1. 请求详情页 HTML
+  // 获取详情页HTML
   const response = await Widget.http.get(link, { headers });
   const html = response.data;
 
-  // 2. 从 __NEXT_DATA__ 提取视频元数据
+  // 提取视频元数据
   const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
   if (!nextDataMatch) throw new Error("无法解析页面数据");
-  
   const nextData = JSON.parse(nextDataMatch[1]);
   const video = nextData.props?.pageProps?.video;
   if (!video) throw new Error("未找到视频信息");
 
-  // 3. 获取最高分辨率源
   const sources = video.sources || [];
-  if (sources.length === 0) throw new Error("没有可用的视频源");
+  if (sources.length === 0) throw new Error("没有可用源");
   const bestSource = sources[sources.length - 1];
-  const resolution = bestSource.resolution;
-  const folder = bestSource.folder || `${video.id}-${resolution}`;
+  const folder = bestSource.folder || `${video.id}-${bestSource.resolution}`;
   
-  // 4. 从封面图提取 CDN 域名（封面与视频同域）
   const coverUrl = video.coverImageUrl;
   const domainMatch = coverUrl.match(/https?:\/\/([^\/]+)/);
   const cdnDomain = domainMatch ? domainMatch[1] : "v.rn246.xyz";
 
-  // 5. 构造 TS 片段的基础 URL
-  const tsBaseUrl = `https://${cdnDomain}/hls/${folder}/${folder}/CLS-`;
+  // 尝试不同的m3u8文件名
+  const m3u8Candidates = [
+    `https://${cdnDomain}/hls/${folder}/${folder}/playlist.m3u8`,
+    `https://${cdnDomain}/hls/${folder}/${folder}/index.m3u8`,
+    `https://${cdnDomain}/hls/${folder}/${folder}/master.m3u8`,
+    `https://${cdnDomain}/hls/${folder}/playlist.m3u8`,
+    `https://${cdnDomain}/hls/${folder}/index.m3u8`,
+  ];
 
-  // 6. 根据视频时长估算 TS 片段数量（每个片段约 6-10 秒）
-  const duration = video.duration || 300; // 默认 5 分钟
-  const estimatedSegments = Math.ceil(duration / 8); // 按 8 秒一片估算，稍多取一些
-  
-  // 7. 生成虚拟 m3u8 内容（EXT-X-BYTERANGE 不需要，直接完整 TS）
-  let m3u8Content = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n";
-  for (let i = 0; i < estimatedSegments; i++) {
-    const seq = i.toString().padStart(3, '0');
-    m3u8Content += `#EXTINF:10.0,\n${tsBaseUrl}${seq}.ts\n`;
+  let validM3u8 = null;
+  for (const candidate of m3u8Candidates) {
+    try {
+      const testResp = await Widget.http.head(candidate, { headers });
+      if (testResp.statusCode === 200) {
+        validM3u8 = candidate;
+        break;
+      }
+    } catch (e) {
+      // 继续尝试
+    }
   }
-  m3u8Content += "#EXT-X-ENDLIST";
 
-  // 8. 由于 Widget 可能不支持直接传入 m3u8 字符串，我们将它保存为一个临时文件或使用 data URI
-  //    如果环境支持 data URI 播放 m3u8，可以这样：
-  const dataUri = "data:application/vnd.apple.mpegurl;base64," + btoa(unescape(encodeURIComponent(m3u8Content)));
+  if (!validM3u8) {
+    throw new Error("无法定位m3u8文件，请手动提供地址");
+  }
 
-  // 9. 构造返回 item
+  // 返回真实m3u8 URL
   const item = {
     id: link,
     type: "detail",
-    videoUrl: dataUri,  // 使用 data URI 作为播放源
+    videoUrl: validM3u8,
     mediaType: "movie",
     customHeaders: {
       "Referer": link,
@@ -463,7 +466,7 @@ async function loadDetail(link) {
     },
   };
 
-  // 10. 尝试添加相关推荐
+  // 相关推荐
   try {
     const sections = parseHtml(html);
     const related = sections.flatMap(s => s.childItems);
@@ -471,9 +474,4 @@ async function loadDetail(link) {
   } catch (e) {}
 
   return item;
-}
-
-// 辅助函数：UTF8 转 base64（兼容旧环境）
-function btoaUTF8(str) {
-  return btoa(unescape(encodeURIComponent(str)));
 }
