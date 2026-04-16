@@ -4,7 +4,7 @@ WidgetMetadata = {
   description: "獲取 rou.video 視頻",
   author: "alex",
   site: "https://rou.video",
-  version: "1.0.0",
+  version: "1.0.1",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -403,15 +403,15 @@ function parseHtml(htmlContent) {
 
 async function loadDetail(link) {
   const headers = {
-    "User-Agent": "Mozilla/5.0",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Referer": "https://rou.video/",
   };
 
-  // 获取详情页HTML
+  // 1. 获取详情页 HTML
   const response = await Widget.http.get(link, { headers });
   const html = response.data;
 
-  // 提取视频元数据
+  // 2. 提取 __NEXT_DATA__ 中的视频信息
   const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
   if (!nextDataMatch) throw new Error("无法解析页面数据");
   const nextData = JSON.parse(nextDataMatch[1]);
@@ -422,13 +422,13 @@ async function loadDetail(link) {
   if (sources.length === 0) throw new Error("没有可用源");
   const bestSource = sources[sources.length - 1];
   const folder = bestSource.folder || `${video.id}-${bestSource.resolution}`;
-  
+
   const coverUrl = video.coverImageUrl;
   const domainMatch = coverUrl.match(/https?:\/\/([^\/]+)/);
   const cdnDomain = domainMatch ? domainMatch[1] : "v.rn246.xyz";
 
-  // 尝试不同的m3u8文件名
-  const m3u8Candidates = [
+  // 3. 构建可能的 m3u8 候选列表
+  const candidates = [
     `https://${cdnDomain}/hls/${folder}/${folder}/playlist.m3u8`,
     `https://${cdnDomain}/hls/${folder}/${folder}/index.m3u8`,
     `https://${cdnDomain}/hls/${folder}/${folder}/master.m3u8`,
@@ -436,24 +436,40 @@ async function loadDetail(link) {
     `https://${cdnDomain}/hls/${folder}/index.m3u8`,
   ];
 
+  // 4. 并发探测可用的 m3u8 地址（HEAD 请求，不下载内容）
   let validM3u8 = null;
-  for (const candidate of m3u8Candidates) {
+  for (const url of candidates) {
     try {
-      const testResp = await Widget.http.head(candidate, { headers });
-      if (testResp.statusCode === 200) {
-        validM3u8 = candidate;
+      const headResp = await Widget.http.head(url, { headers });
+      if (headResp.statusCode === 200) {
+        validM3u8 = url;
         break;
       }
     } catch (e) {
-      // 继续尝试
+      // 忽略错误，继续下一个
     }
   }
 
   if (!validM3u8) {
-    throw new Error("无法定位m3u8文件，请手动提供地址");
+    // 如果 HEAD 请求被阻止，可以尝试带 Range 的 GET 请求（只获取一个字节）
+    for (const url of candidates) {
+      try {
+        const testResp = await Widget.http.get(url, {
+          headers: { ...headers, "Range": "bytes=0-0" }
+        });
+        if (testResp.statusCode === 206 || testResp.statusCode === 200) {
+          validM3u8 = url;
+          break;
+        }
+      } catch (e) {}
+    }
   }
 
-  // 返回真实m3u8 URL
+  if (!validM3u8) {
+    throw new Error("无法定位有效的 m3u8 文件，请检查 CDN 或手动提供地址。");
+  }
+
+  // 5. 构造返回对象
   const item = {
     id: link,
     type: "detail",
@@ -466,7 +482,7 @@ async function loadDetail(link) {
     },
   };
 
-  // 相关推荐
+  // 6. 添加相关推荐
   try {
     const sections = parseHtml(html);
     const related = sections.flatMap(s => s.childItems);
