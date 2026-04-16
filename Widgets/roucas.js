@@ -402,50 +402,63 @@ function parseHtml(htmlContent) {
 }
 
 async function loadDetail(link) {
-  const headers = {
-    "User-Agent": "Mozilla/5.0",
-    "Referer": "https://rou.video/",
-  };
-  const response = await Widget.http.get(link, { headers });
-  const html = response.data;
-  let hlsUrl = "";
+  // 1. 首次访问视频页，获取 Cookie 和 HTML（用于提取相关推荐）
+  const initialResp = await Widget.http.get(link, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    },
+    // 允许自动处理 Set-Cookie（Widget 环境通常支持）
+    withCredentials: true,
+  });
 
-  // 1. 尝试直接调用可能的 API 接口（最稳定）
+  const html = initialResp.data;
+  // 提取视频 ID
   const idMatch = link.match(/\/v\/([a-zA-Z0-9]+)/);
-  if (idMatch) {
-    const videoId = idMatch[1];
-    const apiCandidates = [
-      `https://rou.video/api/video/${videoId}`,
-      `https://rou.video/api/video/${videoId}/source`,
-      `https://rou.video/api/stream?id=${videoId}`,
-    ];
-    for (let apiUrl of apiCandidates) {
-      try {
-        const apiResp = await Widget.http.get(apiUrl, {
-          headers: { ...headers, "X-Requested-With": "XMLHttpRequest" }
-        });
-        const data = typeof apiResp.data === 'string' ? JSON.parse(apiResp.data) : apiResp.data;
-        if (data.url) hlsUrl = data.url;
-        else if (data.data?.url) hlsUrl = data.data.url;
-        else if (data.videoUrl) hlsUrl = data.videoUrl;
-        if (hlsUrl) break;
-      } catch (e) {}
+  if (!idMatch) throw new Error("无效的视频链接");
+  const videoId = idMatch[1];
+
+  // 2. 从响应头或全局 Cookie 中提取 CSRF Token（NextAuth 格式）
+  let csrfToken = "";
+  const setCookie = initialResp.headers?.["set-cookie"] || [];
+  for (const cookieStr of setCookie) {
+    const match = cookieStr.match(/__Host-next-auth\.csrf-token=([^;]+)/);
+    if (match) {
+      csrfToken = match[1];
+      break;
     }
   }
+  // 如果未从响应头获取到，尝试从已存储的 Cookie 中读取（某些环境自动管理）
+  // 这里直接使用初始请求的 Cookie 池继续后续请求
 
-  // 2. 正则匹配（兜底）
+  // 3. 调用播放 API
+  const apiUrl = `https://rou.video/api/v/${videoId}/play`;
+  const postResp = await Widget.http.post(apiUrl, {
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Referer": link,
+      "Origin": "https://rou.video",
+    },
+    data: JSON.stringify({ id: videoId }), // 请求体长度 34 字节
+    withCredentials: true, // 携带 Cookie
+  });
+
+  const data = typeof postResp.data === 'string' ? JSON.parse(postResp.data) : postResp.data;
+  let hlsUrl = data.url || data.videoUrl || data.data?.url;
+
+  // 递归查找 m3u8 链接（备用）
   if (!hlsUrl) {
-    const m3u8Match = html.match(/(https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*)/i);
-    if (m3u8Match) hlsUrl = m3u8Match[1];
+    hlsUrl = findM3u8InObject(data);
   }
 
   if (!hlsUrl) {
-    throw new Error("无法获取视频地址，请手动提供 m3u8 链接以协助适配。");
+    throw new Error("无法获取视频流地址，接口响应：" + JSON.stringify(data).substring(0, 200));
   }
 
   if (hlsUrl.startsWith('//')) hlsUrl = 'https:' + hlsUrl;
 
-  return {
+  const item = {
     id: link,
     type: "detail",
     videoUrl: hlsUrl,
@@ -453,7 +466,32 @@ async function loadDetail(link) {
     customHeaders: {
       "Referer": link,
       "Origin": "https://rou.video",
-      "User-Agent": headers["User-Agent"]
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     },
   };
+
+  // 添加相关推荐
+  try {
+    const sections = parseHtml(html);
+    const related = sections.flatMap(s => s.childItems);
+    if (related.length) item.childItems = related;
+  } catch (e) {}
+
+  return item;
+}
+
+function findM3u8InObject(obj) {
+  if (typeof obj === 'string' && obj.includes('.m3u8')) return obj;
+  if (Array.isArray(obj)) {
+    for (let v of obj) {
+      const found = findM3u8InObject(v);
+      if (found) return found;
+    }
+  } else if (obj && typeof obj === 'object') {
+    for (let k in obj) {
+      const found = findM3u8InObject(obj[k]);
+      if (found) return found;
+    }
+  }
+  return null;
 }
