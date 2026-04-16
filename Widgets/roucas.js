@@ -439,79 +439,73 @@ function parseHtml(htmlContent) {
 
 // 详情解析：如果传入的是页面链接，同样从 __NEXT_DATA__ 构造 m3u8 地址
 async function loadDetail(link) {
-  // 如果 link 已经是 m3u8 地址，直接返回
-  if (link.indexOf(".m3u8") !== -1) {
-    return {
-      id: link,
-      type: "detail",
-      videoUrl: link,
-      mediaType: "movie",
-      customHeaders: {
-        "Referer": "https://rou.video/",
-        "Origin": "https://rou.video",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-      }
-    };
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://rou.video/",
+  };
+
+  // 1. 获取详情页 HTML
+  const response = await Widget.http.get(link, { headers });
+  const html = response.data;
+
+  // 2. 提取 __NEXT_DATA__ 中的视频元数据
+  const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+  if (!nextDataMatch) throw new Error("无法解析页面数据");
+  const nextData = JSON.parse(nextDataMatch[1]);
+  const video = nextData.props?.pageProps?.video;
+  if (!video) throw new Error("未找到视频信息");
+
+  // 3. 获取视频源信息
+  const sources = video.sources || [];
+  if (sources.length === 0) throw new Error("没有可用源");
+  const bestSource = sources[sources.length - 1];
+  const resolution = bestSource.resolution;
+  const folder = bestSource.folder || `${video.id}-${resolution}`;
+
+  // 4. 从封面图提取 CDN 域名和完整查询参数（签名）
+  const coverUrl = video.coverImageUrl;
+  const domainMatch = coverUrl.match(/https?:\/\/([^\/]+)/);
+  const cdnDomain = domainMatch ? domainMatch[1] : "v.rn246.xyz";
+  const queryMatch = coverUrl.match(/\?(.+)$/);
+  const queryString = queryMatch ? "?" + queryMatch[1] : "";
+
+  // 5. 构造 TS 分片的基础 URL（注意后缀为 .jpg）
+  const tsBase = `https://${cdnDomain}/hls/${folder}/${folder}-${resolution}/CLS-`;
+
+  // 6. 估算分片数量（每个约8秒，额外加2个）
+  const duration = video.duration || 600;
+  const segments = Math.ceil(duration / 8) + 2;
+
+  // 7. 生成虚拟 m3u8 内容
+  let m3u8Content = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n";
+  for (let i = 0; i < segments; i++) {
+    const seq = i.toString().padStart(3, '0');
+    // 关键：分片扩展名为 .jpg，并附带签名参数
+    m3u8Content += `#EXTINF:10.0,\n${tsBase}${seq}.jpg${queryString}\n`;
   }
+  m3u8Content += "#EXT-X-ENDLIST";
 
-  // 否则请求详情页HTML
-  var response = await Widget.http.get(link, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Referer": "https://rou.video/",
-    },
-  });
+  // 8. 转为 base64 data URI
+  const dataUri = "data:application/vnd.apple.mpegurl;base64," + btoa(unescape(encodeURIComponent(m3u8Content)));
 
-  var html = response.data;
-  var hlsUrl = "";
-
-  // 从 __NEXT_DATA__ 提取视频数据
-  var nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-  if (nextDataMatch) {
-    try {
-      var nextData = JSON.parse(nextDataMatch[1]);
-      var video = nextData.props?.pageProps?.video;
-      if (video && video.sources && video.sources.length > 0) {
-        // 选最高分辨率
-        var source = video.sources[video.sources.length - 1];
-        var folder = source.folder || video.id + "-" + source.resolution;
-        var coverDomain = video.coverImageUrl.match(/https?:\/\/([^\/]+)/)?.[1] || "v.rn246.xyz";
-        hlsUrl = "https://" + coverDomain + "/hls/" + folder + "/" + folder + "/playlist.m3u8";
-      }
-    } catch (e) {
-      console.error("详情页解析 __NEXT_DATA__ 失败:", e.message);
-    }
-  }
-
-  if (!hlsUrl) {
-    throw new Error("無法獲取視頻流地址");
-  }
-
-  var item = {
+  // 9. 构造返回对象
+  const item = {
     id: link,
     type: "detail",
-    videoUrl: hlsUrl,
+    videoUrl: dataUri,
     mediaType: "movie",
     customHeaders: {
       "Referer": link,
       "Origin": "https://rou.video",
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      "User-Agent": headers["User-Agent"]
     },
   };
 
-  // 添加相关推荐（使用原有的parseHtml解析）
+  // 10. 相关推荐（如果有 parseHtml 函数）
   try {
-    var sections = parseHtml(html);
-    var related = [];
-    for (var i = 0; i < sections.length; i++) {
-      var arr = sections[i].childItems;
-      for (var j = 0; j < arr.length; j++) {
-        related.push(arr[j]);
-      }
-    }
-    if (related.length > 0) {
-      item.childItems = related;
-    }
+    const sections = parseHtml(html);
+    const related = sections.flatMap(s => s.childItems);
+    if (related.length) item.childItems = related;
   } catch (e) {}
 
   return item;
