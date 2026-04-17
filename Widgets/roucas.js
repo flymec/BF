@@ -402,84 +402,90 @@ function parseHtml(htmlContent) {
 }
 
 async function loadDetail(link) {
+  // =========================
+  // 1. 获取页面
+  // =========================
   var response = await Widget.http.get(link, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "User-Agent": "Mozilla/5.0",
       "Referer": "https://rou.video/",
     },
   });
 
   var html = response.data;
-  var hlsUrl = "";
 
-  // 方式1: 从封面图 URL 推导 m3u8 路径
-  // 封面格式: https://v.rn2XX.xyz/m/.../czM6Ly9yb3V2L2hscy9{base64}/Y292ZXIuanBn
-  // m3u8格式: https://v.rn2XX.xyz/hls/{videoId}/index.m3u8
-  // 封面 URL 中 base64 解码后包含 hls/{videoId}/cover.jpg
-  var coverMatch = html.match(/https:\/\/(v\.rn\d+\.xyz)\/m\/[^"'\s]+\/czM6Ly9yb3V2L2hscyv([A-Za-z0-9_-]+)\/Y292ZXIuanBn/);
-  if (coverMatch) {
-    // czM6Ly9yb3V2L2hscyv = base64("s3://rouv/hls/") 前缀固定
-    // 后续是 videoId 的 base64，再后面是 /Y292ZXIuanBn = /cover.jpg
-    // 直接从封面 URL 里提取 CDN 域名和 hls 路径
-    var cdnDomain = coverMatch[1];
-    // 尝试直接从 img src 的完整 URL 解析 hls 路径
-    var imgSrcMatch = html.match(/https:\/\/v\.rn\d+\.xyz\/m\/[^"'\s]+czM6Ly9yb3V2L2hscy\/([\w]+)\/Y292ZXIuanBn/);
-    if (imgSrcMatch) {
-      hlsUrl = "https://" + cdnDomain + "/hls/" + imgSrcMatch[1] + "/index.m3u8";
+  // =========================
+  // 2. 提取 videoId + CDN
+  // =========================
+  var videoIdMatch = link.match(/\/v\/([a-z0-9]+)/);
+  var cdnMatch = html.match(/https:\/\/(v\.rn\d+\.xyz)/);
+
+  if (!videoIdMatch || !cdnMatch) {
+    throw new Error("解析失败：未找到 videoId 或 CDN");
+  }
+
+  var videoId = videoIdMatch[1];
+  var cdn = cdnMatch[1];
+
+  // =========================
+  // 3. 构造分片目录
+  // =========================
+  var baseUrl = `https://${cdn}/hls/${videoId}/${videoId}-720/`;
+
+  // =========================
+  // 4. 动态探测分片数量
+  // =========================
+  var maxSegments = 300; // 上限（防止死循环）
+  var segments = [];
+
+  for (let i = 0; i < maxSegments; i++) {
+    let index = i.toString().padStart(3, "0");
+    let testUrl = baseUrl + `CLS-${index}.jpg`;
+
+    try {
+      let res = await Widget.http.get(testUrl, {
+        method: "HEAD",
+        headers: {
+          "Referer": "https://rou.video/",
+        },
+      });
+
+      if (res.status == 200) {
+        segments.push(`CLS-${index}.jpg`);
+      } else {
+        break;
+      }
+    } catch (e) {
+      break;
     }
   }
 
-  // 方式2: 从页面 HTML 直接匹配 m3u8
-  if (!hlsUrl) {
-    var m2 = html.match(/https?:\/\/v\.rn\d+\.xyz\/hls\/[^\s'"<>]+\.m3u8/);
-    if (m2) hlsUrl = m2[0];
+  if (segments.length === 0) {
+    throw new Error("未获取到分片");
   }
 
-  // 方式3: 通用 m3u8 匹配
-  if (!hlsUrl) {
-    var m3 = html.match(/['"]?(https?:\/\/[^\s'"<>]+\.m3u8[^\s'"<>]*)/);
-    if (m3) hlsUrl = m3[1];
-  }
+  // =========================
+  // 5. 生成 m3u8
+  // =========================
+  let m3u8 = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n";
 
-  // 方式4: 从 link 解析视频 ID，用封面图 CDN 域名拼接
-  if (!hlsUrl) {
-    var videoIdMatch = link.match(/\/v\/([a-z0-9]+)$/);
-    var cdnMatch = html.match(/https:\/\/(v\.rn\d+\.xyz)\/m\//);
-    if (videoIdMatch && cdnMatch) {
-      hlsUrl = "https://" + cdnMatch[1] + "/hls/" + videoIdMatch[1] + "/index.m3u8";
-    }
-  }
+  segments.forEach(seg => {
+    m3u8 += "#EXTINF:10.0,\n" + baseUrl + seg + "\n";
+  });
 
-  if (!hlsUrl) {
-    throw new Error("無法獲取視頻流地址");
-  }
+  m3u8 += "#EXT-X-ENDLIST";
 
-  var item = {
+  // =========================
+  // 6. 返回可播放数据
+  // =========================
+  return {
     id: link,
     type: "detail",
-    videoUrl: hlsUrl,
+    videoUrl: "data:application/vnd.apple.mpegurl;base64," + btoa(m3u8),
     mediaType: "movie",
     customHeaders: {
-      "Referer": link,
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Referer": "https://rou.video/",
+      "User-Agent": "Mozilla/5.0",
     },
   };
-
-  try {
-    var sections = parseHtml(html);
-    var related = [];
-    for (var i = 0; i < sections.length; i++) {
-      var arr = sections[i].childItems;
-      for (var j = 0; j < arr.length; j++) {
-        related.push(arr[j]);
-      }
-    }
-    if (related.length > 0) {
-      item.childItems = related;
-    }
-  } catch (e) {
-    // 相關推薦解析失敗不影響主流程
-  }
-
-  return item;
 }
