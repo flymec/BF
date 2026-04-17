@@ -417,66 +417,84 @@ async function loadDetail(link) {
   // =========================
   // 2. 提取 videoId + CDN
   // =========================
-  var videoIdMatch = link.match(/\/v\/([a-z0-9]+)/);
-  var cdnMatch = html.match(/https:\/\/(v\.rn\d+\.xyz)/);
+  var videoId = (link.match(/\/v\/([a-z0-9]+)/) || [])[1];
+  var cdn = (html.match(/https:\/\/(v\.rn\d+\.xyz)/) || [])[1];
 
-  if (!videoIdMatch || !cdnMatch) {
-    throw new Error("解析失败：未找到 videoId 或 CDN");
+  if (!videoId || !cdn) {
+    throw new Error("解析失败");
   }
 
-  var videoId = videoIdMatch[1];
-  var cdn = cdnMatch[1];
-
   // =========================
-  // 3. 构造分片目录
+  // 3. 尝试清晰度（自动降级）
   // =========================
-  var baseUrl = `https://${cdn}/hls/${videoId}/${videoId}-720/`;
+  var qualities = ["-720", "-480", "-1080", ""];
+  var baseUrl = "";
 
-  // =========================
-  // 4. 动态探测分片数量
-  // =========================
-  var maxSegments = 300; // 上限（防止死循环）
-  var segments = [];
-
-  for (let i = 0; i < maxSegments; i++) {
-    let index = i.toString().padStart(3, "0");
-    let testUrl = baseUrl + `CLS-${index}.jpg`;
-
+  for (let q of qualities) {
+    let test = `https://${cdn}/hls/${videoId}/${videoId}${q}/CLS-000.jpg`;
     try {
-      let res = await Widget.http.get(testUrl, {
-        method: "HEAD",
-        headers: {
-          "Referer": "https://rou.video/",
-        },
+      let res = await Widget.http.get(test, {
+        headers: { Referer: "https://rou.video/" },
       });
-
       if (res.status == 200) {
-        segments.push(`CLS-${index}.jpg`);
-      } else {
+        baseUrl = `https://${cdn}/hls/${videoId}/${videoId}${q}/`;
         break;
       }
-    } catch (e) {
-      break;
+    } catch (e) {}
+  }
+
+  if (!baseUrl) {
+    throw new Error("未找到有效清晰度");
+  }
+
+  // =========================
+  // 4. 并发扫描分片（快很多）
+  // =========================
+  let max = 200;
+  let batchSize = 10;
+  let segments = [];
+
+  for (let i = 0; i < max; i += batchSize) {
+    let tasks = [];
+
+    for (let j = 0; j < batchSize; j++) {
+      let index = (i + j).toString().padStart(3, "0");
+      let url = baseUrl + `CLS-${index}.jpg`;
+
+      tasks.push(
+        Widget.http.get(url, {
+          headers: { Referer: "https://rou.video/" },
+        }).then(res => {
+          if (res.status == 200) return `CLS-${index}.jpg`;
+          return null;
+        }).catch(() => null)
+      );
     }
+
+    let results = await Promise.all(tasks);
+    let valid = results.filter(Boolean);
+
+    if (valid.length === 0) break;
+    segments.push(...valid);
   }
 
   if (segments.length === 0) {
-    throw new Error("未获取到分片");
+    throw new Error("分片为空");
   }
 
   // =========================
   // 5. 生成 m3u8
   // =========================
-  let m3u8 = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n";
+  let m3u8 = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n";
 
   segments.forEach(seg => {
-    m3u8 += "#EXTINF:10.0,\n" + baseUrl + seg + "\n";
+    m3u8 += "#EXTINF:10,\n" + baseUrl + seg + "\n";
   });
 
   m3u8 += "#EXT-X-ENDLIST";
 
   // =========================
-  // 6. 返回可播放数据
+  // 6. 返回
   // =========================
   return {
     id: link,
