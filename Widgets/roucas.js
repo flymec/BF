@@ -4,7 +4,7 @@ WidgetMetadata = {
   description: "獲取 rou.video 視頻",
   author: "alex",
   site: "https://rou.video",
-  version: "1.0.1",
+  version: "1.0.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -294,7 +294,6 @@ WidgetMetadata = {
   },
 };
 
-// ---------- 核心函数 ----------
 
 async function search(params) {
   params = params || {};
@@ -324,7 +323,7 @@ async function loadPageSections(params) {
       throw new Error("地址不能為空");
     }
 
-    // 翻页处理
+    // 翻页: ?order=createdAt&page=N
     var page = params.from;
     if (page && page !== "1") {
       var sep = url.indexOf("?") >= 0 ? "&" : "?";
@@ -351,74 +350,36 @@ async function loadPageSections(params) {
   }
 }
 
-// 解析列表页HTML，提取视频信息并构造HLS地址
 function parseHtml(htmlContent) {
   var $ = Widget.html.load(htmlContent);
   var items = [];
 
-  // 1. 提取 __NEXT_DATA__ 中的视频详细数据（用于构造m3u8）
-  var videoDataMap = {};
-  var nextDataMatch = htmlContent.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-  if (nextDataMatch) {
-    try {
-      var nextData = JSON.parse(nextDataMatch[1]);
-      var videos = nextData.props?.pageProps?.videos || [];
-      // 也支持搜索结果页的数据结构：可能位于 nextData.props.pageProps.data
-      if (!videos.length && nextData.props?.pageProps?.data) {
-        videos = nextData.props.pageProps.data;
-      }
-      for (var i = 0; i < videos.length; i++) {
-        var v = videos[i];
-        if (v.id) {
-          videoDataMap[v.id] = v;
-        }
-      }
-    } catch (e) {
-      console.error("解析 __NEXT_DATA__ 失败:", e.message);
-    }
-  }
-
-  // 2. 解析DOM中的卡片
+  // 每个视频卡片: <a href="/v/xxx">...</a>
   var linkElements = $("a[href^='/v/']").toArray();
+
   for (var i = 0; i < linkElements.length; i++) {
     var $a = $(linkElements[i]);
     var href = $a.attr("href") || "";
-    if (!href || href.indexOf("/v/") !== 0) continue;
+    if (!href || href.indexOf("/v/") !== 0) {
+      continue;
+    }
 
-    var videoId = href.split("/v/")[1];
     var link = "https://rou.video" + href;
 
-    // 封面图
+    // 封面: img 的 src，通常是第一张图
     var $img = $a.find("img").first();
     var cover = $img.attr("src") || $img.attr("data-src") || "";
 
-    // 标题
+    // 标题: img 的 alt 属性即标题
     var title = $img.attr("alt") || "";
     if (!title) {
       title = $a.text().trim();
     }
 
-    // 时长
+    // 时长: a 标签内文本中匹配时间格式
     var aText = $a.text() || "";
     var durationMatch = aText.match(/(\d+小時\d+分\d+秒|\d+小時\d+分|\d+分\d+秒|\d+分|\d+秒)/);
     var duration = durationMatch ? durationMatch[0] : "";
-
-    // 构造HLS播放地址
-    var hlsUrl = "";
-    var videoInfo = videoDataMap[videoId];
-    if (videoInfo && videoInfo.sources && videoInfo.sources.length > 0) {
-      // 选择最高分辨率（通常最后一个分辨率最高）
-      var source = videoInfo.sources[videoInfo.sources.length - 1];
-      var resolution = source.resolution;
-      var folder = source.folder || videoId + "-" + resolution;
-      
-      // 从封面图提取CDN域名
-      var domainMatch = cover.match(/https?:\/\/([^\/]+)/);
-      var videoDomain = domainMatch ? domainMatch[1] : "v.rn246.xyz";
-      
-      // 播放列表文件名（通常是 playlist.m3u8，也可能是 index.m3u8）
-      hlsUrl = "https://" + videoDomain + "/hls/" + folder + "/" + folder + "/playlist.m3u8";
-    }
 
     if (link && title) {
       items.push({
@@ -426,7 +387,7 @@ function parseHtml(htmlContent) {
         type: "url",
         title: title,
         backdropPath: cover,
-        link: hlsUrl || link, // 如果有HLS地址则直接使用，否则回退到页面链接
+        link: link,
         mediaType: "movie",
         durationText: duration,
         description: duration,
@@ -434,79 +395,91 @@ function parseHtml(htmlContent) {
     }
   }
 
-  return items.length > 0 ? [{ title: "", childItems: items }] : [];
+  if (items.length > 0) {
+    return [{ title: "", childItems: items }];
+  }
+  return [];
 }
 
-// 详情解析：如果传入的是页面链接，同样从 __NEXT_DATA__ 构造 m3u8 地址
 async function loadDetail(link) {
-  const headers = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Referer": "https://rou.video/",
-  };
+  var response = await Widget.http.get(link, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Referer": "https://rou.video/",
+    },
+  });
 
-  // 1. 获取详情页 HTML
-  const response = await Widget.http.get(link, { headers });
-  const html = response.data;
+  var html = response.data;
+  var hlsUrl = "";
 
-  // 2. 提取 __NEXT_DATA__ 中的视频元数据
-  const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-  if (!nextDataMatch) throw new Error("无法解析页面数据");
-  const nextData = JSON.parse(nextDataMatch[1]);
-  const video = nextData.props?.pageProps?.video;
-  if (!video) throw new Error("未找到视频信息");
-
-  // 3. 获取视频源信息
-  const sources = video.sources || [];
-  if (sources.length === 0) throw new Error("没有可用源");
-  const bestSource = sources[sources.length - 1];
-  const resolution = bestSource.resolution;
-  const folder = bestSource.folder || `${video.id}-${resolution}`;
-
-  // 4. 从封面图提取 CDN 域名和完整查询参数（签名）
-  const coverUrl = video.coverImageUrl;
-  const domainMatch = coverUrl.match(/https?:\/\/([^\/]+)/);
-  const cdnDomain = domainMatch ? domainMatch[1] : "v.rn246.xyz";
-  const queryMatch = coverUrl.match(/\?(.+)$/);
-  const queryString = queryMatch ? "?" + queryMatch[1] : "";
-
-  // 5. 构造 TS 分片的基础 URL（注意后缀为 .jpg）
-  const tsBase = `https://${cdnDomain}/hls/${folder}/${folder}-${resolution}/CLS-`;
-
-  // 6. 估算分片数量（每个约8秒，额外加2个）
-  const duration = video.duration || 600;
-  const segments = Math.ceil(duration / 8) + 2;
-
-  // 7. 生成虚拟 m3u8 内容
-  let m3u8Content = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n";
-  for (let i = 0; i < segments; i++) {
-    const seq = i.toString().padStart(3, '0');
-    // 关键：分片扩展名为 .jpg，并附带签名参数
-    m3u8Content += `#EXTINF:10.0,\n${tsBase}${seq}.jpg${queryString}\n`;
+  // 方式1: 从封面图 URL 推导 m3u8 路径
+  // 封面格式: https://v.rn2XX.xyz/m/.../czM6Ly9yb3V2L2hscy9{base64}/Y292ZXIuanBn
+  // m3u8格式: https://v.rn2XX.xyz/hls/{videoId}/index.m3u8
+  // 封面 URL 中 base64 解码后包含 hls/{videoId}/cover.jpg
+  var coverMatch = html.match(/https:\/\/(v\.rn\d+\.xyz)\/m\/[^"'\s]+\/czM6Ly9yb3V2L2hscyv([A-Za-z0-9_-]+)\/Y292ZXIuanBn/);
+  if (coverMatch) {
+    // czM6Ly9yb3V2L2hscyv = base64("s3://rouv/hls/") 前缀固定
+    // 后续是 videoId 的 base64，再后面是 /Y292ZXIuanBn = /cover.jpg
+    // 直接从封面 URL 里提取 CDN 域名和 hls 路径
+    var cdnDomain = coverMatch[1];
+    // 尝试直接从 img src 的完整 URL 解析 hls 路径
+    var imgSrcMatch = html.match(/https:\/\/v\.rn\d+\.xyz\/m\/[^"'\s]+czM6Ly9yb3V2L2hscy\/([\w]+)\/Y292ZXIuanBn/);
+    if (imgSrcMatch) {
+      hlsUrl = "https://" + cdnDomain + "/hls/" + imgSrcMatch[1] + "/index.m3u8";
+    }
   }
-  m3u8Content += "#EXT-X-ENDLIST";
 
-  // 8. 转为 base64 data URI
-  const dataUri = "data:application/vnd.apple.mpegurl;base64," + btoa(unescape(encodeURIComponent(m3u8Content)));
+  // 方式2: 从页面 HTML 直接匹配 m3u8
+  if (!hlsUrl) {
+    var m2 = html.match(/https?:\/\/v\.rn\d+\.xyz\/hls\/[^\s'"<>]+\.m3u8/);
+    if (m2) hlsUrl = m2[0];
+  }
 
-  // 9. 构造返回对象
-  const item = {
+  // 方式3: 通用 m3u8 匹配
+  if (!hlsUrl) {
+    var m3 = html.match(/['"]?(https?:\/\/[^\s'"<>]+\.m3u8[^\s'"<>]*)/);
+    if (m3) hlsUrl = m3[1];
+  }
+
+  // 方式4: 从 link 解析视频 ID，用封面图 CDN 域名拼接
+  if (!hlsUrl) {
+    var videoIdMatch = link.match(/\/v\/([a-z0-9]+)$/);
+    var cdnMatch = html.match(/https:\/\/(v\.rn\d+\.xyz)\/m\//);
+    if (videoIdMatch && cdnMatch) {
+      hlsUrl = "https://" + cdnMatch[1] + "/hls/" + videoIdMatch[1] + "/index.m3u8";
+    }
+  }
+
+  if (!hlsUrl) {
+    throw new Error("無法獲取視頻流地址");
+  }
+
+  var item = {
     id: link,
     type: "detail",
-    videoUrl: dataUri,
+    videoUrl: hlsUrl,
     mediaType: "movie",
     customHeaders: {
       "Referer": link,
-      "Origin": "https://rou.video",
-      "User-Agent": headers["User-Agent"]
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     },
   };
 
-  // 10. 相关推荐（如果有 parseHtml 函数）
   try {
-    const sections = parseHtml(html);
-    const related = sections.flatMap(s => s.childItems);
-    if (related.length) item.childItems = related;
-  } catch (e) {}
+    var sections = parseHtml(html);
+    var related = [];
+    for (var i = 0; i < sections.length; i++) {
+      var arr = sections[i].childItems;
+      for (var j = 0; j < arr.length; j++) {
+        related.push(arr[j]);
+      }
+    }
+    if (related.length > 0) {
+      item.childItems = related;
+    }
+  } catch (e) {
+    // 相關推薦解析失敗不影響主流程
+  }
 
   return item;
 }
