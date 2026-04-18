@@ -192,4 +192,297 @@ WidgetMetadata = {
           description: "列表地址",
           value: "https://rou.video/t/自拍流出",
         },
- 
+        {
+          name: "from",
+          title: "頁碼",
+          type: "page",
+          description: "頁碼",
+          value: "1",
+        },
+      ],
+    },
+    // OnlyFans模块
+    {
+      title: "OnlyFans",
+      description: "按博主分類瀏覽OnlyFans視頻",
+      requiresWebView: false,
+      functionName: "loadPage",
+      sectionMode: false,
+      cacheDuration: 3600,
+      params: [
+        {
+          name: "url",
+          title: "選擇博主",
+          type: "enumeration",
+          description: "選擇博主",
+          value: "https://rou.video/t/OnlyFans",
+          enumOptions: [
+            { title: "OnlyFans（全部）", value: "https://rou.video/t/OnlyFans" },
+            { title: "fansly", value: "https://rou.video/t/fansly" },
+            { title: "tangbo_hu（唐伯虎）", value: "https://rou.video/t/tangbo_hu" },
+            { title: "HongKongDoll", value: "https://rou.video/t/HongKongDoll" },
+            { title: "BunnyMiffy", value: "https://rou.video/t/BunnyMiffy" },
+            { title: "Nana_Taipei", value: "https://rou.video/t/Nana_Taipei" },
+            { title: "qiobnxingcai", value: "https://rou.video/t/qiobnxingcai" },
+            { title: "suchanghub", value: "https://rou.video/t/suchanghub" },
+            { title: "ssrpeach", value: "https://rou.video/t/ssrpeach" },
+            { title: "nicolove.cc", value: "https://rou.video/t/nicolove.cc" },
+            { title: "kitty2002102", value: "https://rou.video/t/kitty2002102" },
+            { title: "Miuzxc", value: "https://rou.video/t/Miuzxc" },
+            { title: "YuZuKitty", value: "https://rou.video/t/YuZuKitty" },
+            { title: "ZZZ666", value: "https://rou.video/t/ZZZ666" },
+            { title: "tinaislove", value: "https://rou.video/t/tinaislove" },
+            { title: "aryminh", value: "https://rou.video/t/aryminh" },
+            { title: "meehutao（米胡桃）", value: "https://rou.video/t/meehutao" },
+            { title: "emmy18y（艾玛）", value: "https://rou.video/t/emmy18y" },
+            { title: "fansone", value: "https://rou.video/t/fansone" },
+          ],
+        },
+        {
+          name: "from",
+          title: "頁碼",
+          type: "page",
+          description: "頁碼",
+          value: "1",
+        },
+      ],
+    },
+    // 日本模块
+    {
+      title: "日本",
+      description: "日本視頻",
+      requiresWebView: false,
+      functionName: "loadPage",
+      sectionMode: false,
+      cacheDuration: 3600,
+      params: [
+        {
+          name: "url",
+          title: "列表地址",
+          type: "constant",
+          description: "列表地址",
+          value: "https://rou.video/t/日本",
+        },
+        {
+          name: "from",
+          title: "頁碼",
+          type: "page",
+          description: "頁碼",
+          value: "1",
+        },
+      ],
+    },
+  ],
+  search: {
+    title: "搜索",
+    functionName: "search",
+    params: [
+      {
+        name: "keyword",
+        title: "關鍵詞",
+        type: "input",
+        description: "關鍵詞",
+      },
+      {
+        name: "from",
+        title: "頁碼",
+        type: "page",
+        description: "頁碼",
+        value: "1",
+      },
+    ],
+  },
+};
+
+
+async function search(params) {
+  params = params || {};
+  var keyword = encodeURIComponent(params.keyword || "");
+  var url = "https://rou.video/search?q=" + keyword;
+  return await loadPage({ url: url, from: params.from });
+}
+
+async function loadPage(params) {
+  params = params || {};
+  var sections = await loadPageSections(params);
+  var items = [];
+  for (var i = 0; i < sections.length; i++) {
+    var childItems = sections[i].childItems;
+    for (var j = 0; j < childItems.length; j++) {
+      items.push(childItems[j]);
+    }
+  }
+  return items;
+}
+
+async function loadPageSections(params) {
+  params = params || {};
+  try {
+    var url = params.url;
+    if (!url) {
+      throw new Error("地址不能為空");
+    }
+
+    // 翻页: ?order=createdAt&page=N
+    var page = params.from;
+    if (page && page !== "1") {
+      var sep = url.indexOf("?") >= 0 ? "&" : "?";
+      url += sep + "order=createdAt&page=" + page;
+    }
+
+    var response = await Widget.http.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
+        "Referer": "https://rou.video/",
+      },
+    });
+
+    if (!response || !response.data || typeof response.data !== "string") {
+      throw new Error("無法獲取有效的HTML內容");
+    }
+
+    return parseHtml(response.data);
+  } catch (error) {
+    console.error("加載出錯:", error.message);
+    throw error;
+  }
+}
+
+function parseHtml(htmlContent) {
+  var $ = Widget.html.load(htmlContent);
+  var items = [];
+
+  // 每个视频卡片: <a href="/v/xxx">...</a>
+  var linkElements = $("a[href^='/v/']").toArray();
+
+  for (var i = 0; i < linkElements.length; i++) {
+    var $a = $(linkElements[i]);
+    var href = $a.attr("href") || "";
+    if (!href || href.indexOf("/v/") !== 0) {
+      continue;
+    }
+
+    var link = "https://rou.video" + href;
+
+    // 封面: img 的 src，通常是第一张图
+    var $img = $a.find("img").first();
+    var cover = $img.attr("src") || $img.attr("data-src") || "";
+
+    // 标题: img 的 alt 属性即标题
+    var title = $img.attr("alt") || "";
+    if (!title) {
+      title = $a.text().trim();
+    }
+
+    // 时长: a 标签内文本中匹配时间格式
+    var aText = $a.text() || "";
+    var durationMatch = aText.match(/(\d+小時\d+分\d+秒|\d+小時\d+分|\d+分\d+秒|\d+分|\d+秒)/);
+    var duration = durationMatch ? durationMatch[0] : "";
+
+    if (link && title) {
+      items.push({
+        id: link,
+        type: "url",
+        title: title,
+        backdropPath: cover,
+        link: link,
+        mediaType: "movie",
+        durationText: duration,
+        description: duration,
+      });
+    }
+  }
+
+  if (items.length > 0) {
+    return [{ title: "", childItems: items }];
+  }
+  return [];
+}
+
+async function loadDetail(link) {
+  var response = await Widget.http.get(link, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Referer": "https://rou.video/",
+    },
+  });
+
+  var html = response.data;
+  var hlsUrl = "";
+
+  // 封面 URL 格式:
+  // https://v.rn245.xyz/m/.../czM6Ly9yb3V2L2hscy9{videoId的base64}/Y292ZXIuanBn
+  // 其中 czM6Ly9yb3V2L2hscy8 = base64("s3://rouv/hls/")
+  // Y292ZXIuanBn = base64("cover.jpg")
+  // 解码出 videoId 后 m3u8 = https://v.rn2XX.xyz/hls/{videoId}/index.m3u8
+
+  var coverPattern = /https:\/\/(v\.rn\d+\.xyz)\/m\/[^"'\s]+czM6Ly9yb3V2L2hscy8([A-Za-z0-9]+)\/Y292ZXIuanBn/;
+  var coverMatch = html.match(coverPattern);
+
+  if (coverMatch) {
+    var cdnDomain = coverMatch[1];
+    // base64 解码 videoId 部分
+    var b64 = coverMatch[2];
+    // 补 padding
+    while (b64.length % 4 !== 0) { b64 += "="; }
+    try {
+      var decoded = atob(b64);
+      // decoded 即 videoId，例如 cmnov8h290000s67tl5ap681j
+      if (decoded && decoded.length > 5) {
+        hlsUrl = "https://" + cdnDomain + "/hls/" + decoded + "/index.m3u8";
+      }
+    } catch (e) {
+      // atob 失败则跳过
+    }
+  }
+
+  // 方式2: 页面里直接有 m3u8 URL
+  if (!hlsUrl) {
+    var m2 = html.match(/https?:\/\/v\.rn\d+\.xyz\/hls\/[^\s'"<>]+\.m3u8/);
+    if (m2) hlsUrl = m2[0];
+  }
+
+  // 方式3: 从封面 URL 的 CDN 域名 + link 里的 videoId 直接拼接
+  if (!hlsUrl) {
+    var videoIdMatch = link.match(/\/v\/([a-z0-9]+)$/);
+    var cdnMatch = html.match(/https:\/\/(v\.rn\d+\.xyz)\/m\//);
+    if (videoIdMatch && cdnMatch) {
+      hlsUrl = "https://" + cdnMatch[1] + "/hls/" + videoIdMatch[1] + "/index.m3u8";
+    }
+  }
+
+  if (!hlsUrl) {
+    throw new Error("無法獲取視頻流地址");
+  }
+
+  var item = {
+    id: link,
+    type: "detail",
+    videoUrl: hlsUrl,
+    mediaType: "movie",
+    customHeaders: {
+      "Referer": link,
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    },
+  };
+
+  try {
+    var sections = parseHtml(html);
+    var related = [];
+    for (var i = 0; i < sections.length; i++) {
+      var arr = sections[i].childItems;
+      for (var j = 0; j < arr.length; j++) {
+        related.push(arr[j]);
+      }
+    }
+    if (related.length > 0) {
+      item.childItems = related;
+    }
+  } catch (e) {
+    // 相關推薦解析失敗不影響主流程
+  }
+
+  return item;
+}
