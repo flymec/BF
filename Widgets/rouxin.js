@@ -4,7 +4,7 @@ WidgetMetadata = {
   description: "獲取 rou.video 視頻",
   author: "alex",
   site: "https://rou.video",
-  version: "1.0.0",
+  version: "1.0.1",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -402,55 +402,93 @@ function parseHtml(htmlContent) {
 }
 
 async function loadDetail(link) {
-  var response = await Widget.http.get(link, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Referer": "https://rou.video/",
-    },
-  });
+  var headers = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://rou.video/",
+  };
 
+  var response = await Widget.http.get(link, { headers: headers });
   var html = response.data;
-  var hlsUrl = "";
 
-  // 从页面 __NEXT_DATA__ 的 ev 字段解密
-  // 算法: base64解码后每个字节减去 k
-  var evMatch = html.match(/"ev"\s*:\s*\{"d"\s*:\s*"([^"]+)"\s*,\s*"k"\s*:\s*(\d+)\}/);
-if (evMatch) {
-  try {
-    var d = evMatch[1];
-    var k = parseInt(evMatch[2]);
+  // 1. 提取 __NEXT_DATA__
+  var nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+  if (!nextDataMatch) throw new Error("无法解析页面数据");
+  var nextData = JSON.parse(nextDataMatch[1]);
+  var video = nextData.props && nextData.props.pageProps && nextData.props.pageProps.video;
+  if (!video) throw new Error("未找到视频信息");
 
-    var pad = d.length % 4;
-    if (pad) d += "====".slice(0, 4 - pad);
+  // 2. 获取源信息
+  var sources = video.sources || [];
+  if (sources.length === 0) throw new Error("没有可用源");
+  var bestSource = sources[sources.length - 1];
+  var resolution = bestSource.resolution;
+  var folder = bestSource.folder; // 可能是 "cl61e2i8x003612coz4rixrx5" 或完整的 "xxx-720"
 
-    var binary = atob(d);
-    var result = "";
+  var coverUrl = video.coverImageUrl;
+  var domainMatch = coverUrl.match(/https?:\/\/([^\/]+)/);
+  var cdnDomain = domainMatch ? domainMatch[1] : "v.rn246.xyz";
+  var queryMatch = coverUrl.match(/\?(.+)$/);
+  var queryString = queryMatch ? "?" + queryMatch[1] : "";
 
-    for (var i = 0; i < binary.length; i++) {
-      result += String.fromCharCode((binary.charCodeAt(i) - k + 256) % 256);
+  // 3. 从封面图路径推断分片基础路径
+  // 封面图格式可能是：
+  //   /hls/{folder}/{hash}/index.jpg   (新)
+  //   /hls/{folder}/{folder}-{resolution}/CLS-xxx.jpg (旧)
+  var coverPathMatch = coverUrl.match(/\/hls\/([^\/]+)\/([^\/]+)\/([^\/\?]+\.jpg)/);
+  var basePath = "";
+  var segmentPrefix = "";
+  if (coverPathMatch) {
+    var pathFolder = coverPathMatch[1];
+    var subFolder = coverPathMatch[2];
+    var fileName = coverPathMatch[3];
+    basePath = "https://" + cdnDomain + "/hls/" + pathFolder + "/" + subFolder + "/";
+    // 根据文件名推测分片前缀
+    if (fileName.startsWith("CLS-")) {
+      segmentPrefix = "CLS-";
+    } else if (fileName === "index.jpg") {
+      segmentPrefix = "CLS-"; // 默认还是用 CLS- 模式
+    } else {
+      segmentPrefix = fileName.replace(/\.jpg$/, "") + "-";
     }
-
-    var evData = JSON.parse(result);
-
-    // ✅ 多字段兼容（终极关键）
-    hlsUrl =
-      evData.videoUrl ||
-      evData.url ||
-      evData.src ||
-      evData.hls ||
-      evData.file ||
-      "";
-
-    console.log("真实视频地址:", hlsUrl);
-
-  } catch (e) {
-    console.error("解密失败:", e.message);
+  } else {
+    // 回退到之前的标准构造
+    if (!folder) folder = video.id + "-" + resolution;
+    basePath = "https://" + cdnDomain + "/hls/" + folder + "/" + folder + "-" + resolution + "/";
+    segmentPrefix = "CLS-";
   }
-}
+
+  // 4. 尝试探测真实的 m3u8 文件（可选，失败不影响）
+  var hlsUrl = null;
+  var candidates = [
+    basePath + "playlist.m3u8" + queryString,
+    basePath + "index.m3u8" + queryString,
+    basePath + "master.m3u8" + queryString,
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    try {
+      var testResp = await Widget.http.head(candidates[i], { headers: headers });
+      if (testResp.statusCode === 200) {
+        hlsUrl = candidates[i];
+        break;
+      }
+    } catch (e) {}
+  }
+
+  // 5. 如果未找到真实 m3u8，则构造虚拟 m3u8
   if (!hlsUrl) {
-    throw new Error("無法獲取視頻流地址");
+    var duration = video.duration || 600;
+    var segments = Math.ceil(duration / 8) + 2;
+    var m3u8Content = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n";
+    for (var j = 0; j < segments; j++) {
+      var seq = j.toString();
+      while (seq.length < 3) seq = "0" + seq;
+      m3u8Content += "#EXTINF:10.0,\n" + basePath + segmentPrefix + seq + ".jpg" + queryString + "\n";
+    }
+    m3u8Content += "#EXT-X-ENDLIST";
+    hlsUrl = "data:application/vnd.apple.mpegurl;base64," + btoa(unescape(encodeURIComponent(m3u8Content)));
   }
 
+  // 6. 构造返回对象
   var item = {
     id: link,
     type: "detail",
@@ -458,25 +496,23 @@ if (evMatch) {
     mediaType: "movie",
     customHeaders: {
       "Referer": link,
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Origin": "https://rou.video",
+      "User-Agent": headers["User-Agent"]
     },
   };
 
+  // 7. 相关推荐
   try {
     var sections = parseHtml(html);
     var related = [];
     for (var i = 0; i < sections.length; i++) {
-      var arr = sections[i].childItems;
-      for (var j = 0; j < arr.length; j++) {
-        related.push(arr[j]);
+      var childItems = sections[i].childItems;
+      for (var k = 0; k < childItems.length; k++) {
+        related.push(childItems[k]);
       }
     }
-    if (related.length > 0) {
-      item.childItems = related;
-    }
-  } catch (e) {
-    // 相關推薦解析失敗不影響主流程
-  }
+    if (related.length > 0) item.childItems = related;
+  } catch (e) {}
 
   return item;
 }
