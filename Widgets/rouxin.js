@@ -4,7 +4,7 @@ WidgetMetadata = {
   description: "獲取 rou.video 視頻",
   author: "alex",
   site: "https://rou.video",
-  version: "1.0.0",
+  version: "1.0.1",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -414,7 +414,9 @@ async function loadDetail(link) {
 
   // 从页面 __NEXT_DATA__ 的 ev 字段解密
   // 算法: base64解码后每个字节减去 k
-  var evMatch = html.match(/"ev"\s*:\s*\{"d"\s*:\s*"([^"]+)"\s*,\s*"k"\s*:\s*(\d+)\}/);
+  var dMatch = html.match(/"d"\s*:\s*"([^"]+)"/);
+  var kMatch = html.match(/"k"\s*:\s*(\d+)/);
+  var evMatch = (dMatch && kMatch) ? [null, dMatch[1], kMatch[1]] : null;
   if (evMatch) {
     try {
       var d = evMatch[1];
