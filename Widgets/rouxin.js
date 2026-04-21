@@ -4,7 +4,7 @@ WidgetMetadata = {
   description: "獲取 rou.video 視頻",
   author: "alex",
   site: "https://rou.video",
-  version: "1.0.1",
+  version: "1.0.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -407,92 +407,53 @@ async function loadDetail(link) {
     "Referer": "https://rou.video/",
   };
 
+  // 1. 获取详情页 HTML
   var response = await Widget.http.get(link, { headers: headers });
   var html = response.data;
 
-  // 1. 提取 __NEXT_DATA__
+  // 2. 提取 __NEXT_DATA__ 中的视频信息
   var nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
   if (!nextDataMatch) throw new Error("无法解析页面数据");
   var nextData = JSON.parse(nextDataMatch[1]);
   var video = nextData.props && nextData.props.pageProps && nextData.props.pageProps.video;
   if (!video) throw new Error("未找到视频信息");
 
-  // 2. 获取源信息
-  var sources = video.sources || [];
-  if (sources.length === 0) throw new Error("没有可用源");
-  var bestSource = sources[sources.length - 1];
-  var resolution = bestSource.resolution;
-  var folder = bestSource.folder; // 可能是 "cl61e2i8x003612coz4rixrx5" 或完整的 "xxx-720"
-
+  // 3. 获取封面图 URL 和签名参数
   var coverUrl = video.coverImageUrl;
   var domainMatch = coverUrl.match(/https?:\/\/([^\/]+)/);
   var cdnDomain = domainMatch ? domainMatch[1] : "v.rn246.xyz";
   var queryMatch = coverUrl.match(/\?(.+)$/);
   var queryString = queryMatch ? "?" + queryMatch[1] : "";
 
-  // 3. 从封面图路径推断分片基础路径
-  // 封面图格式可能是：
-  //   /hls/{folder}/{hash}/index.jpg   (新)
-  //   /hls/{folder}/{folder}-{resolution}/CLS-xxx.jpg (旧)
-  var coverPathMatch = coverUrl.match(/\/hls\/([^\/]+)\/([^\/]+)\/([^\/\?]+\.jpg)/);
-  var basePath = "";
-  var segmentPrefix = "";
-  if (coverPathMatch) {
-    var pathFolder = coverPathMatch[1];
-    var subFolder = coverPathMatch[2];
-    var fileName = coverPathMatch[3];
-    basePath = "https://" + cdnDomain + "/hls/" + pathFolder + "/" + subFolder + "/";
-    // 根据文件名推测分片前缀
-    if (fileName.startsWith("CLS-")) {
-      segmentPrefix = "CLS-";
-    } else if (fileName === "index.jpg") {
-      segmentPrefix = "CLS-"; // 默认还是用 CLS- 模式
-    } else {
-      segmentPrefix = fileName.replace(/\.jpg$/, "") + "-";
-    }
-  } else {
-    // 回退到之前的标准构造
-    if (!folder) folder = video.id + "-" + resolution;
-    basePath = "https://" + cdnDomain + "/hls/" + folder + "/" + folder + "-" + resolution + "/";
-    segmentPrefix = "CLS-";
-  }
+  // 4. 从封面图路径推断 basePath 和 hash 部分
+  // 封面图格式如: /hls/cl61e2i8x003612coz4rixrx5/F36UGbeRpwj/index.jpg
+  var pathMatch = coverUrl.match(/\/hls\/([^\/]+)\/([^\/]+)\//);
+  if (!pathMatch) throw new Error("无法解析封面图路径");
+  var videoId = pathMatch[1];
+  var hash = pathMatch[2];
+  var basePath = "https://" + cdnDomain + "/hls/" + videoId + "/" + hash + "/";
 
-  // 4. 尝试探测真实的 m3u8 文件（可选，失败不影响）
-  var hlsUrl = null;
-  var candidates = [
-    basePath + "playlist.m3u8" + queryString,
-    basePath + "index.m3u8" + queryString,
-    basePath + "master.m3u8" + queryString,
-  ];
-  for (var i = 0; i < candidates.length; i++) {
-    try {
-      var testResp = await Widget.http.head(candidates[i], { headers: headers });
-      if (testResp.statusCode === 200) {
-        hlsUrl = candidates[i];
-        break;
-      }
-    } catch (e) {}
-  }
+  // 5. 计算分片数量（每个分片约 10 秒，最后一片可能不足）
+  var duration = video.duration || 600;
+  var segments = Math.ceil(duration / 10); // 大部分是10秒一片，向上取整
 
-  // 5. 如果未找到真实 m3u8，则构造虚拟 m3u8
-  if (!hlsUrl) {
-    var duration = video.duration || 600;
-    var segments = Math.ceil(duration / 8) + 2;
-    var m3u8Content = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n";
-    for (var j = 0; j < segments; j++) {
-      var seq = j.toString();
-      while (seq.length < 3) seq = "0" + seq;
-      m3u8Content += "#EXTINF:10.0,\n" + basePath + segmentPrefix + seq + ".jpg" + queryString + "\n";
-    }
-    m3u8Content += "#EXT-X-ENDLIST";
-    hlsUrl = "data:application/vnd.apple.mpegurl;base64," + btoa(unescape(encodeURIComponent(m3u8Content)));
+  // 6. 生成准确的 m3u8 内容（序号从 1 开始，带 -v1-a1 后缀）
+  var m3u8Content = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:1\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-ALLOW-CACHE:YES\n";
+  for (var i = 1; i <= segments; i++) {
+    var segmentDuration = (i === segments && duration % 10 !== 0) ? (duration % 10).toFixed(3) : "10.000";
+    m3u8Content += "#EXTINF:" + segmentDuration + ",\n";
+    m3u8Content += basePath + "CLS-" + i + "-v1-a1.jpg" + queryString + "\n";
   }
+  m3u8Content += "#EXT-X-ENDLIST";
 
-  // 6. 构造返回对象
+  // 7. 转为 base64 data URI
+  var dataUri = "data:application/vnd.apple.mpegurl;base64," + btoa(unescape(encodeURIComponent(m3u8Content)));
+
+  // 8. 构造返回对象
   var item = {
     id: link,
     type: "detail",
-    videoUrl: hlsUrl,
+    videoUrl: dataUri,
     mediaType: "movie",
     customHeaders: {
       "Referer": link,
@@ -501,14 +462,14 @@ async function loadDetail(link) {
     },
   };
 
-  // 7. 相关推荐
+  // 9. 相关推荐
   try {
     var sections = parseHtml(html);
     var related = [];
     for (var i = 0; i < sections.length; i++) {
       var childItems = sections[i].childItems;
-      for (var k = 0; k < childItems.length; k++) {
-        related.push(childItems[k]);
+      for (var j = 0; j < childItems.length; j++) {
+        related.push(childItems[j]);
       }
     }
     if (related.length > 0) item.childItems = related;
