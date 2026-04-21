@@ -4,7 +4,7 @@ WidgetMetadata = {
   description: "獲取 rou.video 視頻",
   author: "alex",
   site: "https://rou.video",
-  version: "1.0.1",
+  version: "1.0.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 60,
   modules: [
@@ -414,29 +414,39 @@ async function loadDetail(link) {
 
   // 从页面 __NEXT_DATA__ 的 ev 字段解密
   // 算法: base64解码后每个字节减去 k
-  var dMatch = html.match(/"d"\s*:\s*"([^"]+)"/);
-  var kMatch = html.match(/"k"\s*:\s*(\d+)/);
-  var evMatch = (dMatch && kMatch) ? [null, dMatch[1], kMatch[1]] : null;
-  if (evMatch) {
-    try {
-      var d = evMatch[1];
-      var k = parseInt(evMatch[2]);
-      var pad = d.length % 4;
-      if (pad) { d += "====".slice(0, 4 - pad); }
-      var binary = atob(d);
-      var result = "";
-      for (var i = 0; i < binary.length; i++) {
-        result += String.fromCharCode((binary.charCodeAt(i) - k + 256) % 256);
-      }
-      var evData = JSON.parse(result);
-      if (evData.videoUrl) {
-        hlsUrl = evData.videoUrl;
-      }
-    } catch (e) {
-      console.error("ev decrypt error:", e.message);
-    }
-  }
+  var evMatch = html.match(/"ev"\s*:\s*\{"d"\s*:\s*"([^"]+)"\s*,\s*"k"\s*:\s*(\d+)\}/);
+if (evMatch) {
+  try {
+    var d = evMatch[1];
+    var k = parseInt(evMatch[2]);
 
+    var pad = d.length % 4;
+    if (pad) d += "====".slice(0, 4 - pad);
+
+    var binary = atob(d);
+    var result = "";
+
+    for (var i = 0; i < binary.length; i++) {
+      result += String.fromCharCode((binary.charCodeAt(i) - k + 256) % 256);
+    }
+
+    var evData = JSON.parse(result);
+
+    // ✅ 多字段兼容（终极关键）
+    hlsUrl =
+      evData.videoUrl ||
+      evData.url ||
+      evData.src ||
+      evData.hls ||
+      evData.file ||
+      "";
+
+    console.log("真实视频地址:", hlsUrl);
+
+  } catch (e) {
+    console.error("解密失败:", e.message);
+  }
+}
   if (!hlsUrl) {
     throw new Error("無法獲取視頻流地址");
   }
